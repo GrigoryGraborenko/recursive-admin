@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Admin</title>
+
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+
+    <script src="https://fb.me/react-15.0.2.js"></script>
+    <script src="https://fb.me/react-dom-15.0.2.js"></script>
+    {#<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>#}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.6/Chart.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href='//maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css' type="text/css"/>
+
+    <style>
+        body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .header {
+            position: absolute;
+            width: 100%;
+            top: 0px;
+            z-index: 10;
+            background-color: rgb(240, 240, 240);
+            padding: 3px;
+        }
+        .header-actions {
+            background-color: rgb(220, 220, 220);
+            padding: 3px;
+        }
+        .wrapper {
+            position: absolute;
+            top: 0px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
+            pointer-events: none;
+        }
+        .content {
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding: 5px;
+            pointer-events: auto;
+        }
+        .entity-link {
+            display: inline-block;
+            margin-right: 5px;
+            margin-top: 1px;
+            margin-bottom: 1px;
+            padding: 1px;
+            border: 1px solid black;
+        }
+        .action-icon {
+            margin-right: 2px;
+            color: darkgreen;
+            cursor: pointer;
+        }
+        .action-icon:hover {
+            color: green;
+        }
+        .filter-section {
+            background-color: rgb(240, 220, 220);
+            padding: 2px;
+            margin-left: 5px;
+        }
+        .data-table {
+            white-space: nowrap;
+        }
+        .data-table-content {
+            overflow-x: scroll;
+        }
+        .data-table-controls {
+            display: inline-block;
+            min-width: 550px;
+            min-height: 24px;
+        }
+        .data-row {
+            display: block;
+        }
+        .data-row:nth-child(odd) {
+            background-color: rgb(240, 240, 240);
+        }
+        .selected {
+            background-color: rgb(240, 255, 240);
+        }
+        .sorted {
+            background-color: rgb(240, 240, 255);
+        }
+        .filtered {
+            background-color: rgb(255, 240, 240);
+        }
+        .sortedfiltered {
+            background-color: rgb(255, 230, 255);
+        }
+        .data-cell {
+            width: 120px;
+            display: inline-block;
+            overflow-x: hidden;
+            border-left: 1px solid black;
+        }
+        .data-xs {
+            width: 60px;
+        }
+        .data-sm {
+            width: 100px;
+        }
+        .data-lg {
+            width: 150px;
+        }
+        .data-header {
+            color: red;
+        }
+        .data-expansion {
+            margin-top: 5px;
+            margin-left: 30px;
+        }
+        .invisible {
+            visibility: hidden;
+        }
+    </style>
+
+    {% block javascripts %}
+        {% javascripts %}
+        {% endjavascripts %}
+    {% endblock %}
+
+</head>
+<body>
+
+<!-- start of body content -->
+{% block body %}
+
+    <div class="header">
+
+        {% for entity in entities %}
+            {% if (entity.priority < 0) and (show_minor is not defined) %}
+                <button id="show-minor-entities" class="btn btn-xs">Show more...</button>
+                <button id="hide-minor-entities" class="btn btn-xs invisible low-priority">Hide</button>
+                {% set show_minor = true %}
+            {% endif %}
+            <a href="#{{ entity.name }}" class="entity-link{% if entity.priority < 0 %} invisible low-priority{% endif %}" data-entity="{{ entity.meta.name }}" data-name="{{ entity.name }}" title="{{ entity.name }}">{{ entity.label }}</a>
+        {% endfor %}
+
+        {% if global_actions is not empty %}
+            <div class="header-actions">
+                {% for action in global_actions %}
+                    <button class="{{ action.classes }} global-action-button" data-index="{{ action.index }}" data-name="{{ action.name }}">{{ action.label }}</button>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="wrapper" id="main-admin-container">
+        <p class="wrapper" style="top: 50%; left:50%">Initializing...</p>
+    </div>
+
+{% endblock %}
+
+{% block endjavascripts %}
+    <script>
+        var g_InitialData = JSON.parse('{{ js_output_data | serialize('json') | escape('js') }}');
+    </script>
+
+    <script>
+        var gf_RenderData = null;
+        var g_Outstanding = null;
+
+        $(".entity-link").click(function() {
+            var entity = $(this).data().entity;
+            if(entity === undefined) {
+                return;
+            }
+            if(gf_RenderData === null) {
+                g_Outstanding = entity;
+            } else {
+                gf_RenderData(entity);
+            }
+        });
+
+        $low = $(".low-priority");
+        $("#show-minor-entities").click(function() {
+            $low.removeClass("invisible");
+            $(this).addClass("hidden");
+        });
+        $("#hide-minor-entities").click(function() {
+            $low.addClass("invisible");
+            $("#show-minor-entities").removeClass("hidden");
+        });
+
+    </script>
+
+    {% javascripts  '@RecursiveAdminBundle/Resources/js/react/dist/admin.js' %}
+        <script src="{{ asset_url }}" type="text/javascript"></script>
+    {% endjavascripts %}
+
+{% endblock %}
+
+
+</body>
+</html>

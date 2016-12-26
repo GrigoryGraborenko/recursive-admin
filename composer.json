@@ -1,0 +1,8 @@
+{
+    "name": "grigorygraborenko/recursive-admin",
+    "autoload": {
+        "psr-0" : {
+            "Grigorygraborenko\\RecursiveAdmin" : "src"
+        }
+    }
+}
