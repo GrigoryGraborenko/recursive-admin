@@ -1,5 +1,15 @@
 {
     "name": "grigorygraborenko/recursive-admin",
+    "description": "An automatic, recursive-on-associations admin panel for symfony/doctrine with customization options",
+    "keywords": ["symfony","admin","recursive","react"],
+    "homepage": "https://github.com/GrigoryGraborenko/recursive-admin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Grigory Graborenko",
+            "role": "Developer"
+        }
+    ],	
     "autoload": {
         "psr-0" : {
             "Grigorygraborenko\\RecursiveAdmin" : "src"
