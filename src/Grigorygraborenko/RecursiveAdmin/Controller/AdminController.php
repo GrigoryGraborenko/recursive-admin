@@ -76,6 +76,7 @@ class AdminController extends Controller {
      * @param $type
      * @param $class_admin
      * @param null $property_admin
+     * @param bool $ignore_defaults
      * @return bool
      */
     private function hasPermission($type, $class_admin, $property_admin = NULL, $ignore_defaults = false) {
@@ -312,6 +313,10 @@ class AdminController extends Controller {
             ,"global_actions" => $global_actions
             ,"js_output_data" => $json
         );
+
+        if(array_key_exists("back_route", $this->config)) {
+            $output["back_route"] = $this->config["back_route"];
+        }
 
         return $this->render('RecursiveAdminBundle:Admin:admin.html.twig', $output);
     }

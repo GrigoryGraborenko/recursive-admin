@@ -37,9 +37,10 @@ recursive_admin:
         write: [ROLE_SUPER_ADMIN]
         create: [ROLE_SUPER_ADMIN]
         destroy: [ROLE_SUPER_ADMIN]
+	back_route: YOUR_HOME_PAGE_ROUTE	
 ```
 
-Add a route for the dashboard in your routing.yml:
+The attribute "back_route" is optional and will simply add a back button to the dashboard linking to that route name. Add a route for the dashboard in your routing.yml:
 
 ```yml
 recursive_admin:
@@ -82,10 +83,10 @@ global_actions:
 	  method: SERVICE_FUNCTION
 	-
 	  service: OTHER_SERVICE_NAME
-	  method: FUNCTION_NAME
+	  method: OTHER_SERVICE_FUNCTION
 ```
 
-These functions will each be called each time you view a new entity, load the page or activate a global function. The functions themselves will receive two arguements, the service container and the admin user who is currently logged in. The user arguement is in case you want to create or omit custom actions based on user's data. It is not required for permissions management, which is described below. Here is a sample service global actions function:
+These functions will each be called each time you view a new entity, load the page or activate a global function. The functions themselves will receive two arguments, the service container and the admin user who is currently logged in. The user argument is in case you want to create or omit custom actions based on user's data. It is not required for permissions management, which is described below. Here is a sample service global actions function:
 
 ```php
 public function SERVICE_FUNCTION($container, $admin) {
@@ -122,7 +123,25 @@ public function SERVICE_FUNCTION($container, $admin) {
 }
 ```
 
-This function should return a key-value array of global actions. Each action is a key-value array of specifications, and will be a button in the top part of the admin dashboard. The button can be styled using bootstrap classes using the optional "classes" key, with the text determined by the "label" key. Note that since this function is called after *any* global action is executed, you can generate dynamic, meaningful labels and styles for your buttons that are context sensitive. The "visible" key is optional and is an array of fully qualified entity names on which the global action should be visible under. The "description" key is for the text at the top of the modal that pops up when you click the button. The "input" key is fairly complex and will be described in the "Action Input Specification" section below.
+This function should return a key-value array of global actions. Each action is a key-value array of specifications, and will be a button in the top part of the admin dashboard. The button can be styled using bootstrap classes using the optional "classes" key, with the text determined by the "label" key. 
+
+Note that since this function is called after *any* global action is executed, you can generate dynamic, meaningful labels and styles for your buttons that are context sensitive. 
+
+The "visible" key is optional and is an array of fully qualified entity names on which the global action should be visible under. The "description" key is for the text at the top of the modal that pops up when you click the button. The "input" key is fairly complex and will be described in the "Action Input Specification" section below.
+
+The callback function takes three arguments: the service container, the currently logged in admin, and an input key-value array. It should return either a string when an error occurs, or an array for success. 
+
+```php
+public function runTests($container, $admin, $input) {
+	...
+	if($some_error) {
+		return "Tests had an error of some sort";
+	}
+	...
+	return array("report" => "Everything went well");
+}
+
+```
 
 TODO: finish callback function spec
 
@@ -133,6 +152,6 @@ TODO: finish this
 TODO: finish this
 ## License
 
-Total Democracy is open source.
+Recursive admin is open source.
 
 [Read the license here](./LICENSE)

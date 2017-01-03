@@ -137,6 +137,9 @@
 
     <div class="header">
 
+        {% if back_route is defined %}
+            <a href="{{ path(back_route) }}" class="entity-link" title="Back to site">BACK</a>
+        {% endif %}
         {% for entity in entities %}
             {% if (entity.priority < 0) and (show_minor is not defined) %}
                 <button id="show-minor-entities" class="btn btn-xs">Show more...</button>

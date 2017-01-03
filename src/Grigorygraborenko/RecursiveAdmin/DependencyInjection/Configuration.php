@@ -29,6 +29,7 @@ class Configuration implements ConfigurationInterface
                         ->arrayNode('destroy')->info("User roles that can delete all entities by default")->prototype('scalar')->end()->isRequired()->cannotBeEmpty()->end()
                     ->end()
                 ->end()
+                ->scalarNode("back_route")->cannotBeEmpty()->end()
                 ->arrayNode('global_actions')->requiresAtLeastOneElement()->prototype('array')
                     ->children()
                         ->scalarNode('service')->isRequired()->end()
