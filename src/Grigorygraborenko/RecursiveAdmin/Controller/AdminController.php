@@ -909,7 +909,7 @@ class AdminController extends Controller {
 
         $value = $input['value'];
         $field = $metadata->getFieldMapping($input['field']);
-        if(($field['type'] === "datetime") || ($field['type'] === "date")) {
+        if(($value !== NULL) && (($field['type'] === "datetime") || ($field['type'] === "date"))) {
             $value = Carbon::createFromTimestampUTC($value);
         }
 

@@ -94,18 +94,16 @@ var FieldInput = React.createClass({
                 continue;
             }
             var field = input[fieldName];
-            if(field.default !== undefined) {
-                if(((field.type === "date") || (field.type === "datetime"))) {
-                    if(field.default.date !== undefined) {
-                        state[fieldName] = Math.floor((new Date(field.default.date + " UTC")).getTime() * 0.001);
-                    } else {
-                        state[fieldName] = (new Date(field.default)).getTime() * 0.001;
-                    }
-                } else {
-                    state[fieldName] = field.default;
-                }
-            } else if(field.type === "select") {
+            if(field.type === "select") {
+
                 var selected_val = field.choices[0];
+                if(field.default !== undefined) {
+                    field.choices.forEach(function(choice) {
+                        if(choice.value === field.default) {
+                            selected_val = choice;
+                        }
+                    });
+                }
                 if(selected_val !== undefined) {
                     state[fieldName] = selected_val.value;
                     if(selected_val.input) {
@@ -113,6 +111,19 @@ var FieldInput = React.createClass({
                     }
                 } else {
                     state[fieldName] = "";
+                }
+
+            } else if(field.default !== undefined) {
+                if(((field.type === "date") || (field.type === "datetime"))) {
+                    if(field.default === "") {
+                        state[fieldName] = null;
+                    } else if(field.default.date !== undefined) {
+                        state[fieldName] = Math.floor((new Date(field.default.date + " UTC")).getTime() * 0.001);
+                    } else {
+                        state[fieldName] = (new Date(field.default)).getTime() * 0.001;
+                    }
+                } else {
+                    state[fieldName] = field.default;
                 }
             } else if(field.type === "boolean") {
                 state[fieldName] = false;
@@ -145,9 +156,7 @@ var FieldInput = React.createClass({
             change[field_name] = evnt;
         } else if((field.type === "date") || (field.type === "datetime")) {
 
-            // var current = this.state.input[field_name];
             var current = this.props.state[field_name];
-
             var day_seconds = 86400;
             if (sub_field === "date") {
                 if(evnt.target.value === "") {
@@ -300,14 +309,12 @@ var FieldInput = React.createClass({
             }, this);
             inputs.push({field: { label: "Add", required: false }, field_name: field_name + "_add", input: (<i className="fa fa-plus action-icon" aria-hidden="true" onClick={this.handleAddArray.bind(this, field_name, field)}></i>)});
         } else if((field.type === "date") || (field.type === "datetime")) {
-
-            if(value === null) {
+            if((value === null) || (value === "")) {
                 var input = (
                     <span className="form-inline">
                         <input type="date" className={"form-control"} placeholder="yyyy-mm-dd" onChange={this.onChange.bind(this, field_name, field, "date")} value={""} disabled={is_loading}/>
                     </span>);
             } else {
-
                 var date_val = new Date(value * 1000);
                 var month = date_val.getUTCMonth() + 1;
                 var date = date_val.getUTCDate();

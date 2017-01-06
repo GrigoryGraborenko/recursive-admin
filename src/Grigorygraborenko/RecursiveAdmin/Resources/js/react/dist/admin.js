@@ -1,11 +1,15 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-"use strict";
+'use strict';
+
+var _item_table = require('./item_table.jsx');
+
+var _input_modal = require('./input_modal.jsx');
 
 ////////////////////////////////////////////////////////////////////////////////
 // Input Modal
 ////////////////////////////////////////////////////////////////////////////////
 var AdminContainer = React.createClass({
-    displayName: "AdminContainer",
+    displayName: 'AdminContainer',
 
     getInitialState: function getInitialState() {
 
@@ -108,7 +112,10 @@ var AdminContainer = React.createClass({
                     // todo: make the global actions stuff it's own react component
                     for (var global_name in data.global_actions) {
                         var global = data.global_actions[global_name];
-                        $('button[data-name="' + global_name + '"]').html(global.label).removeClass().addClass(global.classes).removeClass("hidden");
+                        $('button[data-name="' + global_name + '"]').html(global.label).removeClass().addClass(global.classes); //.removeClass("hidden");
+                    }
+                    if (this_ref.props.entity !== undefined) {
+                        $(".global-action-specific").addClass("hidden").filter("." + this_ref.props.entity.replace(/\\/g, "-")).removeClass("hidden");
                     }
 
                     if (data.result.file !== undefined) {
@@ -186,21 +193,21 @@ var AdminContainer = React.createClass({
     render: function render() {
 
         if (this.props.entity !== undefined) {
-            var table = React.createElement(ItemTable, { entity: this.props.entity, showModal: this.showModal, columns: this.state.columns, moveHeader: this.moveHeader });
+            var table = React.createElement(_item_table.ItemTable, { entity: this.props.entity, showModal: this.showModal, columns: this.state.columns, moveHeader: this.moveHeader });
         } else {
             var table = React.createElement(
-                "span",
+                'span',
                 null,
-                "No item selected"
+                'No item selected'
             );
         }
 
         return React.createElement(
-            "div",
+            'div',
             { className: "wrapper" },
-            React.createElement(InputModal, { input: this.state.modal, hideModal: this.hideModal, columns: this.state.columns, moveHeader: this.moveHeader }),
+            React.createElement(_input_modal.InputModal, { input: this.state.modal, hideModal: this.hideModal, columns: this.state.columns, moveHeader: this.moveHeader }),
             React.createElement(
-                "div",
+                'div',
                 { className: "wrapper content", style: { top: this.props.offset } },
                 table
             )
@@ -209,41 +216,169 @@ var AdminContainer = React.createClass({
 });
 
 ////////////////////////////////////////////////////////////////////////////////
-// Input Modal
+// INIT
 ////////////////////////////////////////////////////////////////////////////////
-var InputModal = React.createClass({
-    displayName: "InputModal",
+gf_RenderData = function gf_RenderData(entity) {
 
-    getInitialState: function getInitialState() {
-        return { input: {}, loading: false, report: null, error_msg: null };
+    if (entity !== undefined) {
+        $(".global-action-specific").addClass("hidden").filter("." + entity.replace(/\\/g, "-")).removeClass("hidden");
+    }
+    var el = document.getElementById('main-admin-container');
+    var header_height = $(".header").height();
+    ReactDOM.render(React.createElement(AdminContainer, { entity: entity, offset: header_height }), el);
+};
+
+if (g_Outstanding !== null) {
+    gf_RenderData(g_Outstanding);
+    g_Outstanding = null;
+} else if (window.location.hash !== "") {
+    var name = window.location.hash.replace("#", "");
+    gf_RenderData(g_InitialData.entity_names[name]);
+} else {
+    gf_RenderData();
+}
+
+},{"./input_modal.jsx":2,"./item_table.jsx":4}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.InputModal = undefined;
+
+var _item_table = require('./item_table.jsx');
+
+////////////////////////////////////////////////////////////////////////////////
+// Chart Component
+////////////////////////////////////////////////////////////////////////////////
+var ChartContainer = React.createClass({
+    displayName: 'ChartContainer',
+
+    render: function render() {
+        return React.createElement('div', null);
     },
-    componentWillReceiveProps: function componentWillReceiveProps(props) {
-        if (props.input === null) {
-            return;
-        }
+    componentDidMount: function componentDidMount() {
+        this.node = ReactDOM.findDOMNode(this);
 
+        this.canvas = $('<canvas id="modal-canvas" width="80%" height="400"></canvas>');
+        $(this.node).append(this.canvas);
+
+        //var is_time = (this.props.field.type === "date") || (this.props.field.type === "datetime");
+
+        var labels = [];
+        var data = [];
+        this.props.data.forEach(function (point) {
+            labels.push(point.value_of);
+            data.push(parseInt(point.number_of));
+        });
+
+        this.chart = new Chart(this.canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '# of items grouped by ' + this.props.field.label,
+                    data: data,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false
+                //,responsive: false
+                , scales: {
+                    yAxes: [{ ticks: { beginAtZero: true } }]
+                }
+            }
+        });
+
+        this.renderContent(this.props);
+    },
+    componentWillReceiveProps: function componentWillReceiveProps(new_props) {
+        this.renderContent(new_props);
+    },
+    renderContent: function renderContent(props) {
+
+        React.Component(React.createElement(
+            'div',
+            null,
+            props.children
+        ), this.node);
+    },
+    componentWillUnmount: function componentWillUnmount() {
+        ReactDOM.unmountComponentAtNode(this.node);
+        //this.chart.destroy();
+    }
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// FieldInput Component
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * Created by Grigory on 14-Dec-16.
+ */
+
+var FieldInput = React.createClass({
+    displayName: 'FieldInput',
+
+    //getInitialState: function() {
+    //    var state = {};
+    //    // this.getDefaultFieldState(state, this.props.input);
+    //    return { input: state };
+    //}
+    componentDidMount: function componentDidMount() {
         var state = {};
-        this.getDefaultFieldState(state, props.input.input);
-        this.setState({ input: state, loading: false, report: null, error_msg: null });
-    },
-    getDefaultFieldState: function getDefaultFieldState(state, input) {
+        if (this.props.state !== null) {
+            state = $.extend({}, this.props.state);
+        }
+        this.getDefaultFieldState(state, this.props.input);
+        this.props.onChange(state);
+    }
+    // ,componentWillReceiveProps: function(props) {
+    //     if(props.input === null) {
+    //         return;
+    //     }
+    //
+    //     var state = {};
+    //     this.getDefaultFieldState(state, props.input);
+    //     this.setState({ input: state });
+    // }
+    , getDefaultFieldState: function getDefaultFieldState(state, input, existing) {
         for (var fieldName in input) {
+            if (state[fieldName] !== undefined) {
+                continue;
+            }
             var field = input[fieldName];
-            if (field.default !== undefined) {
+            if (field.type === "select") {
+
+                var selected_val = field.choices[0];
+                if (field.default !== undefined) {
+                    field.choices.forEach(function (choice) {
+                        if (choice.value === field.default) {
+                            selected_val = choice;
+                        }
+                    });
+                }
+                if (selected_val !== undefined) {
+                    state[fieldName] = selected_val.value;
+                    if (selected_val.input) {
+                        this.getDefaultFieldState(state, selected_val.input);
+                    }
+                } else {
+                    state[fieldName] = "";
+                }
+            } else if (field.default !== undefined) {
                 if (field.type === "date" || field.type === "datetime") {
-                    if (field.default.date !== undefined) {
+                    if (field.default === "") {
+                        state[fieldName] = null;
+                    } else if (field.default.date !== undefined) {
                         state[fieldName] = Math.floor(new Date(field.default.date + " UTC").getTime() * 0.001);
                     } else {
                         state[fieldName] = new Date(field.default).getTime() * 0.001;
                     }
                 } else {
                     state[fieldName] = field.default;
-                }
-            } else if (field.type === "select") {
-                var selected_val = field.choices[0];
-                state[fieldName] = selected_val.value;
-                if (selected_val.input) {
-                    this.getDefaultFieldState(state, selected_val.input);
                 }
             } else if (field.type === "boolean") {
                 state[fieldName] = false;
@@ -253,6 +388,8 @@ var InputModal = React.createClass({
                 state[fieldName] = [];
             } else if (field.type === "date" || field.type === "datetime") {
                 state[fieldName] = null;
+            } else if (field.type === "array") {
+                state[fieldName] = [];
             } else if (field.type !== "info") {
                 // goes last
                 state[fieldName] = "";
@@ -275,8 +412,7 @@ var InputModal = React.createClass({
             change[field_name] = evnt;
         } else if (field.type === "date" || field.type === "datetime") {
 
-            var current = this.state.input[field_name];
-
+            var current = this.props.state[field_name];
             var day_seconds = 86400;
             if (sub_field === "date") {
                 if (evnt.target.value === "") {
@@ -296,7 +432,8 @@ var InputModal = React.createClass({
                 change[field_name] = minutes * 60 + parseInt(evnt.target.value);
             }
         } else if (field.type === "multientity") {
-            var new_selects = this.state.input[field_name].filter(function (select) {
+            // var new_selects = this.state.input[field_name].filter(function(select) {
+            var new_selects = this.props.state[field_name].filter(function (select) {
 
                 var selected = true;
                 for (var propname in select) {
@@ -308,13 +445,310 @@ var InputModal = React.createClass({
                 return !selected;
             });
             change[field_name] = new_selects;
-            if (this.state.input[field_name].length === new_selects.length) {
+            // if(this.state.input[field_name].length === new_selects.length) {
+            if (this.props.state[field_name].length === new_selects.length) {
                 change[field_name].push(evnt);
             }
         } else {
             change[field_name] = evnt.target.value;
         }
-        var input = $.extend({}, this.state.input, change);
+        // var input = $.extend({}, this.state.input, change);
+        // this.setState({ input: input });
+        var input = $.extend({}, this.props.state, change);
+        this.props.onChange(input);
+    },
+    handleCopyClipboard: function handleCopyClipboard(text, fieldname, field) {
+        var element = document.createElement('div');
+        element.textContent = text;
+        document.body.appendChild(element);
+
+        if (document.selection) {
+            var range = document.body.createTextRange();
+            range.moveToElementText(element);
+            range.select();
+        } else if (window.getSelection) {
+            var range = document.createRange();
+            range.selectNode(element);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+        }
+
+        document.execCommand('copy');
+        element.remove();
+
+        this.onChange(fieldname, field, null, { target: { value: "Copied." } });
+    },
+    handleFileChange: function handleFileChange(field_name, field, evnt) {
+        var file = evnt.target.files[0];
+        this.onChange(field_name, field, null, { target: { value: file } });
+    },
+    handleAddArray: function handleAddArray(field_name, field) {
+        if (this.props.loading) {
+            return;
+        }
+        var change = {};
+        change[field_name] = this.props.state[field_name].concat([{}]);
+        var input = $.extend({}, this.props.state, change);
+        this.props.onChange(input);
+    },
+    handleDeleteArray: function handleDeleteArray(field_name, field, index) {
+        if (this.props.loading) {
+            return;
+        }
+        var new_arr = this.props.state[field_name].slice(0);
+        new_arr.splice(index, 1);
+        var change = {};
+        change[field_name] = new_arr;
+        var input = $.extend({}, this.props.state, change);
+        this.props.onChange(input);
+    },
+    handleArrayChange: function handleArrayChange(field_name, field, index, value) {
+        if (this.props.loading) {
+            return;
+        }
+        var new_arr = this.props.state[field_name].slice(0);
+        new_arr[index] = value;
+        var change = {};
+        change[field_name] = new_arr;
+        var input = $.extend({}, this.props.state, change);
+        this.props.onChange(input);
+    },
+    createFieldInput: function createFieldInput(field_name, field, value) {
+
+        var this_ref = this;
+        var is_loading = this.props.loading;
+        var inputs = [];
+        if (field.type === "entity" || field.type === "multientity") {
+            var mode = { mode: field.type === "multientity" ? "multiselect" : "select", label: "Select", entity: field.entity, value: value, onChange: this.onChange.bind(this, field_name, field, null) };
+            var input = React.createElement(_item_table.ItemTable, { entity: field.entity, mode: mode, columns: this.props.columns, moveHeader: this.props.moveHeader, fixedFilter: field.filter });
+        } else if (field.type === "info") {
+            var text_lines = [];
+            field.text.split("\n").forEach(function (para, index) {
+                text_lines.push(React.createElement(
+                    'p',
+                    { key: index },
+                    para
+                ));
+            });
+            var input = React.createElement(
+                'label',
+                null,
+                text_lines
+            );
+        } else if (field.type === "boolean") {
+            var input = React.createElement(
+                'select',
+                { className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading },
+                React.createElement(
+                    'option',
+                    { value: 'true' },
+                    'True'
+                ),
+                React.createElement(
+                    'option',
+                    { value: 'false' },
+                    'False'
+                )
+            );
+        } else if (field.type === "integer" || field.type === "decimal") {
+            var input = React.createElement('input', { type: 'number', className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
+        } else if (field.type === "select") {
+            var options = [];
+            field.choices.forEach(function (op) {
+                if (typeof op === "string") {
+                    var op_val = op;
+                    var op_label = op;
+                } else {
+                    var op_val = op.value;
+                    var op_label = op.label;
+                }
+                options.push(React.createElement(
+                    'option',
+                    { key: op_val, value: op_val },
+                    op_label
+                ));
+                if (op.input !== undefined && op_val === value) {
+                    for (var fname in op.input) {
+                        var val = this_ref.props.state[fname] !== undefined ? this_ref.props.state[fname] : op.input[fname].default || "";
+                        inputs = inputs.concat(this_ref.createFieldInput(fname, op.input[fname], val));
+                    }
+                }
+            });
+            var input = React.createElement(
+                'select',
+                { className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading },
+                options
+            );
+        } else if (field.type === "array") {
+            inputs.push({ field: { label: "", required: false }, field_name: field_name, input: React.createElement(
+                    'b',
+                    null,
+                    field.label
+                ) });
+            value.forEach(function (val, index) {
+                inputs.push({ field: { required: false, label: "# " + index }, field_name: field_name + index, input: React.createElement(
+                        'div',
+                        null,
+                        React.createElement('i', { className: 'fa fa-times action-icon', 'aria-hidden': 'true', onClick: this.handleDeleteArray.bind(this, field_name, field, index) }),
+                        React.createElement(FieldInput, { input: field.input, state: this.props.state[field_name][index], loading: this.props.loading, onChange: this.handleArrayChange.bind(this, field_name, field, index), columns: this.props.columns, moveHeader: this.props.moveHeader })
+                    ) });
+            }, this);
+            inputs.push({ field: { label: "Add", required: false }, field_name: field_name + "_add", input: React.createElement('i', { className: 'fa fa-plus action-icon', 'aria-hidden': 'true', onClick: this.handleAddArray.bind(this, field_name, field) }) });
+        } else if (field.type === "date" || field.type === "datetime") {
+            if (value === null || value === "") {
+                var input = React.createElement(
+                    'span',
+                    { className: 'form-inline' },
+                    React.createElement('input', { type: 'date', className: "form-control", placeholder: 'yyyy-mm-dd', onChange: this.onChange.bind(this, field_name, field, "date"), value: "", disabled: is_loading })
+                );
+            } else {
+                var date_val = new Date(value * 1000);
+                var month = date_val.getUTCMonth() + 1;
+                var date = date_val.getUTCDate();
+                var hour = date_val.getUTCHours();
+                var minute = date_val.getUTCMinutes();
+                var second = date_val.getUTCSeconds();
+                if (month < 10) {
+                    month = "0" + month;
+                }
+                if (date < 10) {
+                    date = "0" + date;
+                }
+                date_val = date_val.getFullYear() + "-" + month + "-" + date;
+
+                var hours = [];
+                for (var i = 0; i < 24; i++) {
+                    hours.push(React.createElement(
+                        'option',
+                        { key: i, value: i },
+                        i < 10 ? "0" + i : i
+                    ));
+                }
+                var minutes = [];
+                for (var i = 0; i < 60; i++) {
+                    minutes.push(React.createElement(
+                        'option',
+                        { key: i, value: i },
+                        i < 10 ? "0" + i : i
+                    ));
+                }
+
+                var input = React.createElement(
+                    'span',
+                    { className: 'form-inline' },
+                    React.createElement('input', { type: 'date', className: "form-control", placeholder: 'yyyy-mm-dd', onChange: this.onChange.bind(this, field_name, field, "date"), value: date_val,
+                        disabled: is_loading }),
+                    '\xA0\xA0',
+                    React.createElement(
+                        'select',
+                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "hour"), value: hour, disabled: is_loading },
+                        hours
+                    ),
+                    ' :\xA0',
+                    React.createElement(
+                        'select',
+                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "minute"), value: minute, disabled: is_loading },
+                        minutes
+                    ),
+                    ' :\xA0',
+                    React.createElement(
+                        'select',
+                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "second"), value: second, disabled: is_loading },
+                        minutes
+                    )
+                );
+            }
+        } else if (field.type === "clipboard") {
+            var input = React.createElement(
+                'span',
+                null,
+                React.createElement(
+                    'button',
+                    { className: "btn btn-info", onClick: this.handleCopyClipboard.bind(this, field.text, field_name, field) },
+                    'Copy to Clipboard'
+                ),
+                ' ',
+                value
+            );
+        } else if (field.type === "file") {
+            var input = React.createElement(
+                'form',
+                null,
+                React.createElement('input', { type: 'file', className: "modal-file-upload", 'data-name': field_name, onChange: this.handleFileChange.bind(this, field_name, field) })
+            );
+        } else {
+            //console.log("Unknown type " +  field.type);
+            var input = React.createElement('input', { type: 'text', className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
+        }
+        if (input !== undefined) {
+            var input_obj = { field: field, field_name: field_name, input: input };
+            inputs.unshift(input_obj);
+        }
+        return inputs;
+    },
+    createField: function createField(field_name) {
+        var field = this.props.input[field_name];
+        // var value = this.state.input[field_name];
+        var value = this.props.state[field_name];
+
+        if (field === undefined || value === undefined) {
+            //console.log("return NULL for " + field_name);
+            return null;
+        }
+
+        var inputs = this.createFieldInput(field_name, field, value);
+        var elements = [];
+        inputs.forEach(function (input) {
+            var required = input.field.required ? " *" : "";
+            elements.push(React.createElement(
+                'div',
+                { key: input.field_name, className: 'form-group' },
+                React.createElement(
+                    'label',
+                    { 'for': input.field_name, className: "col-sm-2 control-label" },
+                    input.field.label,
+                    required
+                ),
+                React.createElement(
+                    'div',
+                    { className: "col-sm-10" },
+                    input.input
+                )
+            ));
+        });
+
+        return elements;
+    },
+    render: function render() {
+        if (this.props.state === null) {
+            return null;
+        }
+        var fields = this.props.input;
+        return React.createElement(
+            'div',
+            null,
+            Object.keys(fields).map(this.createField)
+        );
+    }
+});
+
+////////////////////////////////////////////////////////////////////////////////
+// Input Modal
+////////////////////////////////////////////////////////////////////////////////
+var InputModal = exports.InputModal = React.createClass({
+    displayName: 'InputModal',
+
+    getInitialState: function getInitialState() {
+        return { input: null, loading: false, report: null, error_msg: null };
+    },
+    componentWillReceiveProps: function componentWillReceiveProps(props) {
+        if (props.input === null) {
+            return;
+        }
+        //var state = {};
+        this.setState({ input: null, loading: false, report: null, error_msg: null });
+    },
+    onFieldChange: function onFieldChange(input) {
         this.setState({ input: input });
     },
     handleOK: function handleOK() {
@@ -355,220 +789,11 @@ var InputModal = React.createClass({
             }
         });
     },
-    handleCopyClipboard: function handleCopyClipboard(text, fieldname, field) {
-        var element = document.createElement('div');
-        element.textContent = text;
-        document.body.appendChild(element);
-
-        if (document.selection) {
-            var range = document.body.createTextRange();
-            range.moveToElementText(element);
-            range.select();
-        } else if (window.getSelection) {
-            var range = document.createRange();
-            range.selectNode(element);
-            window.getSelection().removeAllRanges();
-            window.getSelection().addRange(range);
-        }
-
-        document.execCommand('copy');
-        element.remove();
-
-        this.onChange(fieldname, field, { target: { value: "Copied." } });
-    },
-    handleFileChange: function handleFileChange(field_name, field, evnt) {
-        var file = evnt.target.files[0];
-        this.onChange(field_name, field, null, { target: { value: file } });
-    },
-    createFieldInput: function createFieldInput(field_name, field, value) {
-        var this_ref = this;
-        var is_loading = this.state.loading;
-        var inputs = [];
-        if (field.type === "entity" || field.type === "multientity") {
-            var mode = { mode: field.type === "multientity" ? "multiselect" : "select", label: "Select", entity: field.entity, value: value, onChange: this.onChange.bind(this, field_name, field, null) };
-            var input = React.createElement(ItemTable, { entity: field.entity, mode: mode, columns: this.props.columns, moveHeader: this.props.moveHeader, fixedFilter: field.filter });
-        } else if (field.type === "info") {
-            var text_lines = [];
-            field.text.split("\n").forEach(function (para, index) {
-                text_lines.push(React.createElement(
-                    "p",
-                    { key: index },
-                    para
-                ));
-            });
-            var input = React.createElement(
-                "label",
-                null,
-                text_lines
-            );
-        } else if (field.type === "boolean") {
-            var input = React.createElement(
-                "select",
-                { className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading },
-                React.createElement(
-                    "option",
-                    { value: "true" },
-                    "True"
-                ),
-                React.createElement(
-                    "option",
-                    { value: "false" },
-                    "False"
-                )
-            );
-        } else if (field.type === "integer" || field.type === "decimal") {
-            var input = React.createElement("input", { type: "number", className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
-        } else if (field.type === "select") {
-            var options = [];
-            field.choices.forEach(function (op) {
-                if (typeof op === "string") {
-                    var op_val = op;
-                    var op_label = op;
-                } else {
-                    var op_val = op.value;
-                    var op_label = op.label;
-                }
-                options.push(React.createElement(
-                    "option",
-                    { key: op_val, value: op_val },
-                    op_label
-                ));
-                if (op.input !== undefined && op_val === value) {
-                    for (var fname in op.input) {
-                        var val = this_ref.state.input[fname] !== undefined ? this_ref.state.input[fname] : op.input[fname].default || "";
-                        inputs = inputs.concat(this_ref.createFieldInput(fname, op.input[fname], val));
-                    }
-                }
-            });
-            var input = React.createElement(
-                "select",
-                { className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading },
-                options
-            );
-        } else if (field.type === "date" || field.type === "datetime") {
-
-            if (value === null) {
-                var input = React.createElement(
-                    "span",
-                    { className: "form-inline" },
-                    React.createElement("input", { type: "date", className: "form-control", placeholder: "yyyy-mm-dd", onChange: this.onChange.bind(this, field_name, field, "date"), value: "", disabled: is_loading })
-                );
-            } else {
-
-                var date_val = new Date(value * 1000);
-                var month = date_val.getUTCMonth() + 1;
-                var date = date_val.getUTCDate();
-                var hour = date_val.getUTCHours();
-                var minute = date_val.getUTCMinutes();
-                var second = date_val.getUTCSeconds();
-                if (month < 10) {
-                    month = "0" + month;
-                }
-                if (date < 10) {
-                    date = "0" + date;
-                }
-                date_val = date_val.getFullYear() + "-" + month + "-" + date;
-
-                var hours = [];
-                for (var i = 0; i < 24; i++) {
-                    hours.push(React.createElement(
-                        "option",
-                        { key: i, value: i },
-                        i < 10 ? "0" + i : i
-                    ));
-                }
-                var minutes = [];
-                for (var i = 0; i < 60; i++) {
-                    minutes.push(React.createElement(
-                        "option",
-                        { key: i, value: i },
-                        i < 10 ? "0" + i : i
-                    ));
-                }
-
-                var input = React.createElement(
-                    "span",
-                    { className: "form-inline" },
-                    React.createElement("input", { type: "date", className: "form-control", placeholder: "yyyy-mm-dd", onChange: this.onChange.bind(this, field_name, field, "date"), value: date_val,
-                        disabled: is_loading }),
-                    "  ",
-                    React.createElement(
-                        "select",
-                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "hour"), value: hour, disabled: is_loading },
-                        hours
-                    ),
-                    " : ",
-                    React.createElement(
-                        "select",
-                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "minute"), value: minute, disabled: is_loading },
-                        minutes
-                    ),
-                    " : ",
-                    React.createElement(
-                        "select",
-                        { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "second"), value: second, disabled: is_loading },
-                        minutes
-                    )
-                );
-            }
-        } else if (field.type === "clipboard") {
-            var input = React.createElement(
-                "span",
-                null,
-                React.createElement(
-                    "button",
-                    { className: "btn btn-info", onClick: this.handleCopyClipboard.bind(this, field.text, field_name, field) },
-                    "Copy to Clipboard"
-                ),
-                " ",
-                value
-            );
-        } else if (field.type === "file") {
-            var input = React.createElement(
-                "form",
-                null,
-                React.createElement("input", { type: "file", className: "modal-file-upload", "data-name": field_name, onChange: this.handleFileChange.bind(this, field_name, field) })
-            );
-        } else {
-            var input = React.createElement("input", { type: "text", className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
-        }
-        var input_obj = { field: field, field_name: field_name, input: input };
-        inputs.unshift(input_obj);
-        return inputs;
-    },
-    createField: function createField(field_name) {
-        var field = this.props.input.input[field_name];
-        var value = this.state.input[field_name];
-
-        var inputs = this.createFieldInput(field_name, field, value);
-        var elements = [];
-        inputs.forEach(function (input) {
-            var required = input.field.required ? " *" : "";
-            elements.push(React.createElement(
-                "div",
-                { key: input.field_name, className: "form-group" },
-                React.createElement(
-                    "label",
-                    { "for": input.field_name, className: "col-sm-2 control-label" },
-                    input.field.label,
-                    required
-                ),
-                React.createElement(
-                    "div",
-                    { className: "col-sm-10" },
-                    input.input
-                )
-            ));
-        });
-
-        return elements;
-    },
     render: function render() {
         if (this.props.input === null) {
             return null;
         }
 
-        var fields = this.props.input.input;
         var is_loading = this.state.loading;
 
         if (this.state.report !== null) {
@@ -577,7 +802,7 @@ var InputModal = React.createClass({
                 var report = [];
                 this.state.report.text.split("\n").forEach(function (para, index) {
                     report.push(React.createElement(
-                        "p",
+                        'p',
                         { key: index },
                         para
                     ));
@@ -586,32 +811,32 @@ var InputModal = React.createClass({
                 var report = React.createElement(ChartContainer, { data: this.state.report.data, field: this.state.report.field });
             } else {
                 var report = React.createElement(
-                    "span",
+                    'span',
                     null,
-                    "Unknown report type"
+                    'Unknown report type'
                 );
             }
 
             var contents = React.createElement(
-                "div",
+                'div',
                 { className: "row" },
                 React.createElement(
-                    "h2",
+                    'h2',
                     null,
                     this.props.input.heading
                 ),
                 React.createElement(
-                    "div",
+                    'div',
                     { className: "col-sm-12" },
                     report
                 ),
                 React.createElement(
-                    "div",
+                    'div',
                     { className: "col-sm-12" },
                     React.createElement(
-                        "button",
+                        'button',
                         { className: "btn btn-success", onClick: this.props.hideModal },
-                        "OK"
+                        'OK'
                     )
                 )
             );
@@ -622,7 +847,7 @@ var InputModal = React.createClass({
                 error_report = [];
                 this.state.error_msg.split("\n").forEach(function (para, index) {
                     error_report.push(React.createElement(
-                        "p",
+                        'p',
                         { key: index },
                         para
                     ));
@@ -630,31 +855,31 @@ var InputModal = React.createClass({
             }
 
             var contents = React.createElement(
-                "div",
+                'div',
                 { className: "row" },
                 React.createElement(
-                    "h2",
+                    'h2',
                     null,
                     this.props.input.heading
                 ),
-                Object.keys(fields).map(this.createField),
+                React.createElement(FieldInput, { input: this.props.input.input, state: this.state.input, loading: this.state.loading, onChange: this.onFieldChange, columns: this.props.columns, moveHeader: this.props.moveHeader }),
                 React.createElement(
-                    "div",
+                    'div',
                     { className: "col-sm-offset-2", style: { color: "red" } },
                     error_report
                 ),
                 React.createElement(
-                    "div",
+                    'div',
                     { className: "col-sm-offset-2" },
                     React.createElement(
-                        "button",
+                        'button',
                         { className: "btn btn-success", onClick: this.handleOK, disabled: is_loading },
-                        "OK"
+                        'OK'
                     ),
                     React.createElement(
-                        "button",
+                        'button',
                         { className: "btn btn-danger", onClick: this.props.hideModal, disabled: is_loading },
-                        "Cancel"
+                        'Cancel'
                     )
                 )
             );
@@ -663,16 +888,16 @@ var InputModal = React.createClass({
         var outer_style = { position: "absolute", zIndex: 100, left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(128,128,128, 0.5)", pointerEvents: "auto" };
         var inner_style = { position: "absolute", left: "10%", right: "10%", top: "10%", bottom: "10%", backgroundColor: "rgba(255,255,255, 1.0)", overflowY: "scroll" };
         return React.createElement(
-            "div",
+            'div',
             { style: outer_style },
             React.createElement(
-                "div",
+                'div',
                 { style: inner_style },
                 React.createElement(
-                    "div",
+                    'div',
                     { className: "container", style: { padding: "5px" } },
                     React.createElement(
-                        "div",
+                        'div',
                         { className: "form-horizontal" },
                         contents
                     )
@@ -682,76 +907,20 @@ var InputModal = React.createClass({
     }
 });
 
-////////////////////////////////////////////////////////////////////////////////
-// Chart Component
-////////////////////////////////////////////////////////////////////////////////
-var ChartContainer = React.createClass({
-    displayName: "ChartContainer",
+},{"./item_table.jsx":4}],3:[function(require,module,exports){
+"use strict";
 
-    render: function render() {
-        return React.createElement("div", null);
-    },
-    componentDidMount: function componentDidMount() {
-        this.node = ReactDOM.findDOMNode(this);
-
-        this.canvas = $('<canvas id="modal-canvas" width="80%" height="400"></canvas>');
-        $(this.node).append(this.canvas);
-
-        //var is_time = (this.props.field.type === "date") || (this.props.field.type === "datetime");
-
-        var labels = [];
-        var data = [];
-        this.props.data.forEach(function (point) {
-            labels.push(point.value_of);
-            data.push(parseInt(point.number_of));
-        });
-
-        //console.log(this.props);
-
-        this.chart = new Chart(this.canvas, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '# of items grouped by ' + this.props.field.label,
-                    data: data,
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255,99,132,1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                maintainAspectRatio: false
-                //,responsive: false
-                , scales: {
-                    yAxes: [{ ticks: { beginAtZero: true } }]
-                }
-            }
-        });
-
-        this.renderContent(this.props);
-    },
-    componentWillReceiveProps: function componentWillReceiveProps(new_props) {
-        this.renderContent(new_props);
-    },
-    renderContent: function renderContent(props) {
-
-        React.Component(React.createElement(
-            "div",
-            null,
-            props.children
-        ), this.node);
-    },
-    componentWillUnmount: function componentWillUnmount() {
-        ReactDOM.unmountComponentAtNode(this.node);
-        //this.chart.destroy();
-    }
+Object.defineProperty(exports, "__esModule", {
+    value: true
 });
+exports.ItemRow = undefined;
+
+var _item_table = require("./item_table.jsx");
 
 ////////////////////////////////////////////////////////////////////////////////
 // Item Row
 ////////////////////////////////////////////////////////////////////////////////
-var ItemRow = React.createClass({
+var ItemRow = exports.ItemRow = React.createClass({
     displayName: "ItemRow",
 
     getInitialState: function getInitialState() {
@@ -784,7 +953,7 @@ var ItemRow = React.createClass({
             val_ctrl.choices = field.choices;
         }
         if (field.nullable === true) {
-            controls['is_null'] = { type: "select", label: "Set to empty?", default: "false", choices: [{ value: "true", label: "Empty" }, { value: "false", label: "Not Empty", input: {
+            controls['is_null'] = { type: "select", label: "Set to empty?", default: is_null ? "true" : "false", choices: [{ value: "true", label: "Empty" }, { value: "false", label: "Not Empty", input: {
                         value: val_ctrl
                     } }] };
         } else {
@@ -973,7 +1142,7 @@ var ItemRow = React.createClass({
         return React.createElement(
             "div",
             { className: "data-row data-expansion" },
-            React.createElement(ItemTable, { entity: assoc.targetEntity, "associated-value": identifier, "associated-field": assoc_field, "associated-type": assoc.type_name, mode: this.props.mode, showModal: this.props.showModal, columns: this.props.columns, moveHeader: this.props.moveHeader })
+            React.createElement(_item_table.ItemTable, { entity: assoc.targetEntity, "associated-value": identifier, "associated-field": assoc_field, "associated-type": assoc.type_name, mode: this.props.mode, showModal: this.props.showModal, columns: this.props.columns, moveHeader: this.props.moveHeader })
         );
     },
     render: function render() {
@@ -1005,20 +1174,20 @@ var ItemRow = React.createClass({
                 return selected;
             });
             /*
-            var button_text = "Select";
-            if(is_selected) {
-                var classes = "data-cell data-sm selected";
-                var button_classes = "btn btn-success btn-xs";
-                if(multi) {
-                    button_text = "Deselect";
-                } else {
-                    button_text = "Selected";
-                }
-            } else {
-                var classes = "data-cell data-sm";
-                var button_classes = "btn btn-info btn-xs";
-            }
-            */
+             var button_text = "Select";
+             if(is_selected) {
+             var classes = "data-cell data-sm selected";
+             var button_classes = "btn btn-success btn-xs";
+             if(multi) {
+             button_text = "Deselect";
+             } else {
+             button_text = "Selected";
+             }
+             } else {
+             var classes = "data-cell data-sm";
+             var button_classes = "btn btn-info btn-xs";
+             }
+             */
             if (multi) {
                 var select_ctrl = React.createElement(
                     "span",
@@ -1101,12 +1270,24 @@ var ItemRow = React.createClass({
             this.createExpansion()
         );
     }
+}); /**
+     * Created by Grigory on 14-Dec-16.
+     */
+
+},{"./item_table.jsx":4}],4:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
 });
+exports.ItemTable = undefined;
+
+var _item_row = require("./item_row.jsx");
 
 ////////////////////////////////////////////////////////////////////////////////
 // Item Table
 ////////////////////////////////////////////////////////////////////////////////
-var ItemTable = React.createClass({
+var ItemTable = exports.ItemTable = React.createClass({
     displayName: "ItemTable",
 
 
@@ -1575,9 +1756,13 @@ var ItemTable = React.createClass({
                     this_ref.refresh();
                     return;
                 }
-                var order_affected = data.affected_fields.some(function (field_name) {
-                    return this_ref.doesFieldAffectOrder(field_name);
-                });
+                if (data.affected_fields === undefined) {
+                    var order_affected = false;
+                } else {
+                    var order_affected = data.affected_fields.some(function (field_name) {
+                        return this_ref.doesFieldAffectOrder(field_name);
+                    });
+                }
 
                 if (order_affected) {
                     this_ref.refresh();
@@ -1727,9 +1912,9 @@ var ItemTable = React.createClass({
                     React.createElement(
                         "label",
                         null,
-                        " ",
+                        "\xA0",
                         choice,
-                        "  "
+                        "\xA0\xA0"
                     )
                 );
             };
@@ -1824,7 +2009,7 @@ var ItemTable = React.createClass({
         entity.identifiers.forEach(function (ident) {
             identifier += item[ident];
         });
-        return React.createElement(ItemRow, { key: identifier, item: item, entity: entity, entityName: this.props.entity,
+        return React.createElement(_item_row.ItemRow, { key: identifier, item: item, entity: entity, entityName: this.props.entity,
             editItem: this.editItem, actionItem: this.actionItem, itemCreate: this.itemCreate,
             refresh: this.refresh, mode: this.props.mode, showModal: this.props.showModal,
             columns: this.props.columns, moveHeader: this.props.moveHeader,
@@ -1979,7 +2164,7 @@ var ItemTable = React.createClass({
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa fa-download", onClick: this.handleDownload }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-left", onClick: this.handlePage.bind(this, this.state.page - 1), disabled: this.state.page <= 0 }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-right", onClick: this.handlePage.bind(this, this.state.page + 1), disabled: this.state.page + 1 >= total_pages }),
-                    " ",
+                    "\xA0",
                     React.createElement(
                         "span",
                         null,
@@ -2018,29 +2203,8 @@ var ItemTable = React.createClass({
             )
         );
     }
-});
+}); /**
+     * Created by Grigory on 14-Dec-16.
+     */
 
-////////////////////////////////////////////////////////////////////////////////
-// INIT
-////////////////////////////////////////////////////////////////////////////////
-gf_RenderData = function gf_RenderData(entity) {
-
-    if (entity !== undefined) {
-        $(".global-action-specific").addClass("hidden").filter("." + entity.replace(/\\/g, "-")).removeClass("hidden");
-    }
-    var el = document.getElementById('main-admin-container');
-    var header_height = $(".header").height();
-    ReactDOM.render(React.createElement(AdminContainer, { entity: entity, offset: header_height }), el);
-};
-
-if (g_Outstanding !== null) {
-    gf_RenderData(g_Outstanding);
-    g_Outstanding = null;
-} else if (window.location.hash !== "") {
-    var name = window.location.hash.replace("#", "");
-    gf_RenderData(g_InitialData.entity_names[name]);
-} else {
-    gf_RenderData();
-}
-
-},{}]},{},[1]);
+},{"./item_row.jsx":3}]},{},[1]);

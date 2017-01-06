@@ -129,7 +129,7 @@ Note that since this function is called after *any* global action is executed, y
 
 The "visible" key is optional and is an array of fully qualified entity names on which the global action should be visible under. The "description" key is for the text at the top of the modal that pops up when you click the button. The "input" key is fairly complex and will be described in the "Action Input Specification" section below.
 
-The callback function takes three arguments: the service container, the currently logged in admin, and an input key-value array. It should return either a string when an error occurs, or an array for success. 
+The callback function takes three arguments: the service container, the currently logged in admin, and an input key-value array. It should return either a string when an error occurs, or a key-value array for success. Returning a "report" key will display a success modal with the report string, formatted to handle newlines. Returning with a key "refresh" set to true will instead reload the modal with the fields cleared.
 
 ```php
 public function runTests($container, $admin, $input) {
@@ -140,10 +140,13 @@ public function runTests($container, $admin, $input) {
 	...
 	return array("report" => "Everything went well");
 }
-
 ```
 
-TODO: finish callback function spec
+You can also return a key-value array under the key "file" with this structure:
+
+```php
+return array("file" => array("name" => "test_results.csv", "contents" => "test,result\ninternal,passed\nexternal,passed\n"));
+```
 
 #### Action Input Specification
 TODO: finish this

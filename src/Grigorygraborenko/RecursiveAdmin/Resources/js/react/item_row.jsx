@@ -38,7 +38,7 @@ export const ItemRow = React.createClass({
             val_ctrl.choices = field.choices;
         }
         if(field.nullable === true) {
-            controls['is_null'] = { type: "select", label: "Set to empty?", default: "false", choices: [
+            controls['is_null'] = { type: "select", label: "Set to empty?", default: (is_null ? "true" : "false"), choices: [
                 { value: "true", label: "Empty" }
                 ,{ value: "false", label: "Not Empty", input: {
                     value: val_ctrl
