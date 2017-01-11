@@ -638,19 +638,19 @@ var FieldInput = React.createClass({
                     { className: 'form-inline' },
                     React.createElement('input', { type: 'date', className: "form-control", placeholder: 'yyyy-mm-dd', onChange: this.onChange.bind(this, field_name, field, "date"), value: date_val,
                         disabled: is_loading }),
-                    '\xA0\xA0',
+                    '  ',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "hour"), value: hour, disabled: is_loading },
                         hours
                     ),
-                    ' :\xA0',
+                    ' : ',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "minute"), value: minute, disabled: is_loading },
                         minutes
                     ),
-                    ' :\xA0',
+                    ' : ',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "second"), value: second, disabled: is_loading },
@@ -742,10 +742,10 @@ var InputModal = exports.InputModal = React.createClass({
         return { input: null, loading: false, report: null, error_msg: null };
     },
     componentWillReceiveProps: function componentWillReceiveProps(props) {
-        if (props.input === null) {
+
+        if (props.input === null || this.props.input !== null) {
             return;
         }
-        //var state = {};
         this.setState({ input: null, loading: false, report: null, error_msg: null });
     },
     onFieldChange: function onFieldChange(input) {
@@ -1683,6 +1683,38 @@ var ItemTable = exports.ItemTable = React.createClass({
             callback(true);
         });
     },
+    handleFakeData: function handleFakeData() {
+        var controls = {
+            "amount": { type: "integer", label: "Number of rows to add to this table", default: 0 },
+            "sure": { type: "boolean", label: "Are you sure?", default: false }
+        };
+        var this_ref = this;
+        this.props.showModal("Fill this table full of fake data", controls, function (input, callback) {
+            if (input.sure !== true) {
+                callback(false, "Confirm you are sure about adding fake data to the table");
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: g_InitialData.fake_data_route,
+                dataType: "json",
+                data: {
+                    entity: this_ref.props.entity,
+                    amount: input.amount
+                }
+            }).done(function (data) {
+                callback(true);
+                this_ref.refresh();
+            }).error(function (data) {
+                if (data.responseJSON !== undefined) {
+                    callback(false, data.responseJSON.result);
+                } else {
+                    callback(false, "Unknown Error");
+                }
+            });
+        });
+    },
     doesFieldAffectOrder: function doesFieldAffectOrder(fieldName) {
         var affects = this.state.sortFields.some(function (sort) {
             return sort.name === fieldName;
@@ -1912,9 +1944,9 @@ var ItemTable = exports.ItemTable = React.createClass({
                     React.createElement(
                         "label",
                         null,
-                        "\xA0",
+                        " ",
                         choice,
-                        "\xA0\xA0"
+                        "  "
                     )
                 );
             };
@@ -2144,6 +2176,10 @@ var ItemTable = exports.ItemTable = React.createClass({
             headers[order.index] = this.createFieldHeader(fieldName, order.width);
         }
 
+        if (g_InitialData.allow_fake_data_creation === true && this.props.mode === undefined) {
+            var fake_data_button = React.createElement("button", { className: "btn btn-default btn-xs fa fa-exclamation-triangle", onClick: this.handleFakeData });
+        }
+
         return React.createElement(
             "div",
             { className: "data-table", onMouseMove: this.handleMoveHeaderMove },
@@ -2162,9 +2198,10 @@ var ItemTable = exports.ItemTable = React.createClass({
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-bar-chart", onClick: this.handleChart }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-calculator", onClick: this.handleStats }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa fa-download", onClick: this.handleDownload }),
+                    fake_data_button,
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-left", onClick: this.handlePage.bind(this, this.state.page - 1), disabled: this.state.page <= 0 }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-right", onClick: this.handlePage.bind(this, this.state.page + 1), disabled: this.state.page + 1 >= total_pages }),
-                    "\xA0",
+                    " ",
                     React.createElement(
                         "span",
                         null,

@@ -411,6 +411,39 @@ export const ItemTable = React.createClass({
         });
 
     }
+    ,handleFakeData: function () {
+        var controls = {
+            "amount": { type: "integer", label: "Number of rows to add to this table", default: 0 }
+            ,"sure": { type: "boolean", label: "Are you sure?", default: false }
+        };
+        var this_ref = this;
+        this.props.showModal("Fill this table full of fake data", controls, function(input, callback) {
+            if(input.sure !== true) {
+                callback(false, "Confirm you are sure about adding fake data to the table");
+                return;
+            }
+
+            $.ajax({
+                type: "POST"
+                ,url: g_InitialData.fake_data_route
+                ,dataType: "json"
+                ,data: {
+                    entity: this_ref.props.entity
+                    ,amount: input.amount
+                }
+            }).done(function(data) {
+                callback(true);
+                this_ref.refresh();
+
+            }).error(function(data) {
+                if(data.responseJSON !== undefined) {
+                    callback(false, data.responseJSON.result);
+                } else {
+                    callback(false, "Unknown Error");
+                }
+            });
+        });
+    }
     ,doesFieldAffectOrder: function(fieldName) {
         var affects = this.state.sortFields.some(function(sort) {
             return sort.name === fieldName;
@@ -776,6 +809,10 @@ export const ItemTable = React.createClass({
             headers[order.index] = this.createFieldHeader(fieldName, order.width);
         }
 
+        if((g_InitialData.allow_fake_data_creation === true) && (this.props.mode === undefined)) {
+            var fake_data_button = <button className={"btn btn-default btn-xs fa fa-exclamation-triangle"} onClick={this.handleFakeData} ></button>;
+        }
+
         return  <div className={"data-table"} onMouseMove={this.handleMoveHeaderMove}>
             <div>
                         <span className={"data-table-controls"}>
@@ -784,6 +821,7 @@ export const ItemTable = React.createClass({
                         <button className={"btn btn-default btn-xs fa fa-bar-chart"} onClick={this.handleChart} ></button>
                         <button className={"btn btn-default btn-xs fa fa-calculator"} onClick={this.handleStats} ></button>
                         <button className={"btn btn-default btn-xs fa fa fa-download"} onClick={this.handleDownload} ></button>
+                        {fake_data_button}
                         <button className={"btn btn-default btn-xs fa fa-chevron-left"} onClick={this.handlePage.bind(this, this.state.page - 1)} disabled={this.state.page <= 0}></button>
                         <button className={"btn btn-default btn-xs fa fa-chevron-right"} onClick={this.handlePage.bind(this, this.state.page + 1)} disabled={(this.state.page + 1) >= total_pages}></button>&nbsp;
                             <span> Page: {this.state.page + 1} / {total_pages} (<b>{data.total_items}</b> items, <select value={this.state.pageSize} onChange={this.handlePageSize}>{pageSizes}</select> per page) </span>

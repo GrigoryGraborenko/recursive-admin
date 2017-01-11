@@ -288,6 +288,7 @@ class AdminController extends Controller {
             ,"graph_route" => $this->get("router")->generate("sr-admin-graph")
             ,"stats_route" => $this->get("router")->generate("sr-admin-stats")
             ,"export_route" => $this->get("router")->generate("sr-admin-export")
+            ,"fake_data_route" => $this->get("router")->generate("sr-admin-fake-data")
             ,"edit_route" => $this->get("router")->generate("sr-admin-edit")
             ,"action_route" => $this->get("router")->generate("sr-admin-action")
             ,"create_route" => $this->get("router")->generate("sr-admin-create")
@@ -296,6 +297,10 @@ class AdminController extends Controller {
             ,"entity_names" => $entity_names
             ,"global_actions" => $global_actions
         );
+
+        if(array_key_exists("testing", $this->config) && ($this->config["testing"]["allow_fake_data_creation"] === true) && ($this->role_checker->isGranted($this->config["testing"]["permission"]))) {
+            $json["allow_fake_data_creation"] = true;
+        }
 
         usort($output_entities, function($a, $b) {
             if($a['priority'] > $b['priority']) {
@@ -869,6 +874,89 @@ class AdminController extends Controller {
     }
 
     /**
+     * @Route("/fake-data", name="sr-admin-fake-data")
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function adminFakeDataAction(Request $request) {
+
+        $input = $request->request->all();
+
+        if((!array_key_exists("testing", $this->config)) || ($this->config["testing"]["allow_fake_data_creation"] !== true) || (!$this->role_checker->isGranted($this->config["testing"]["permission"]))) {
+            return $this->respondError("Access denied");
+        }
+
+        if((!array_key_exists("entity", $input)) || (!array_key_exists("amount", $input))) {
+            return $this->respondError("Incorrect parameters");
+        }
+        $num_create = intval($input["amount"]);
+        if($num_create < 1) {
+            return $this->respondError("Need to create at least one item");
+        }
+
+        $metadata = $this->em->getMetadataFactory()->getMetadataFor($input["entity"]);
+        $reflection = $metadata->getReflectionClass();
+
+        for($i = 0; $i < $num_create; $i++) {
+
+            $new_item = $reflection->newInstanceWithoutConstructor();
+            foreach($metadata->getAssociationMappings() as $assoc) {
+                $type = $this->association_translations[$assoc["type"]];
+                if(($type === "many_many") || ($type === "one_many")) {
+                    continue;
+                }
+                if(array_key_exists("joinColumns", $assoc) && array_key_exists("nullable", $assoc["joinColumns"][0]) && ($assoc["joinColumns"][0]["nullable"] === true) &&(mt_rand(0, 2) === 0)) {
+                    continue;
+                }
+                $field_name = $assoc['fieldName'];
+
+                $other_repo = $this->em->getRepository($assoc["targetEntity"]);
+
+                $qb = $other_repo->createQueryBuilder('e');
+                $qb->setFirstResult(0)->setMaxResults(1);
+                $query = $qb->getQuery();
+                $paginator = new Paginator($query, true);
+                $total = count($paginator);
+
+                $other_item = $other_repo->findBy(array(), array(), 1, mt_rand(0, $total - 1))[0];
+
+                $metadata->setFieldValue($new_item, $field_name, $other_item);
+            }
+
+            foreach($metadata->getFieldNames() as $field_name) {
+
+                $entity_field = $metadata->getFieldMapping($field_name);
+                if(($entity_field["nullable"] === true) &&(mt_rand(0, 2) === 0)) {
+                    continue;
+                }
+
+                $type = $entity_field["type"];
+                if($type ===  "date") {
+                    $value = Carbon::now("UTC")->subYears(mt_rand(0, 5))->subDays(mt_rand(0, 365));
+                } else if($type ===  "datetime") {
+                    $value = Carbon::now("UTC")->subDays(mt_rand(0, 365))->subSeconds(mt_rand(0, 86400));
+                } else if($type ===  "integer") {
+                    $value = mt_rand(0, 10000);
+                } else if($type ===  "decimal") {
+                    $value = mt_rand(0, 1000000) * 0.01;
+                } else if($type ===  "boolean") {
+                    $value = mt_rand(0, 1) === 0;
+                } else {
+                    $value = md5(rand());
+                }
+                $metadata->setFieldValue($new_item, $field_name, $value);
+            }
+            $this->em->persist($new_item);
+        }
+        $this->em->flush();
+
+        $response = new JsonResponse();
+        $response->setData(array());
+        return $response;
+    }
+
+    /**
      * @Route("/edit", name="sr-admin-edit")
      * @Method("POST")
      *
@@ -979,7 +1067,6 @@ class AdminController extends Controller {
                 $other_item = $other_repo->findOneBy($input[$field_name]);
 
                 $metadata->setFieldValue($new_item, $field_name, $other_item);
-
             }
             foreach($metadata->getFieldNames() as $field_name) {
                 if(!array_key_exists($field_name, $input)) {
@@ -1089,31 +1176,22 @@ class AdminController extends Controller {
         return $response;
     }
 
+    /**
+     * @param $name
+     * @param $index
+     * @param $input
+     * @param $expect_direct
+     * @return array
+     */
     private function globalAction($name, $index, $input, $expect_direct) {
 
         if(!array_key_exists("global_actions", $this->config)) {
             return array(false, "No global actions defined");
         }
 
-//        if ((!array_key_exists("_name", $call_input)) ||
-//            (!array_key_exists("_index", $call_input))
-//        ) {
-//            return array(false, "Incorrect parameters");
-//        }
-
-//        $name = $call_input['_name'];
-//        $index = intval($call_input['_index']);
         if(($index < 0) || ($index >= count($this->config['global_actions']))) {
             return array(false, "Global action index out of range");
         }
-
-//        $input = NULL;
-//        if(array_key_exists("input", $call_input)) {
-//            $input = json_decode($call_input["input"], true);
-//            foreach($file_list as $fieldname => $file) {
-//                $input[$fieldname] = $file;
-//            }
-//        }
 
         $user = $this->getUser();
         $global = $this->config['global_actions'][$index];

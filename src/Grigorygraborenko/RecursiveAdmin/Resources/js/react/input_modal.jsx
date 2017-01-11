@@ -414,10 +414,10 @@ export const InputModal = React.createClass({
         return { input: null, loading: false, report: null, error_msg: null };
     }
     ,componentWillReceiveProps: function(props) {
-        if(props.input === null) {
+
+        if((props.input === null) || (this.props.input !== null)) {
             return;
         }
-        //var state = {};
         this.setState({ input: null, loading: false, report: null, error_msg: null });
     }
     ,onFieldChange: function(input) {
