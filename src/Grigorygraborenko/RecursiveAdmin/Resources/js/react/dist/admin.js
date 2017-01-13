@@ -1566,6 +1566,9 @@ var ItemTable = exports.ItemTable = React.createClass({
         evnt.preventDefault();
         evnt.stopPropagation();
     },
+    handleCreate: function handleCreate() {
+        this.itemCreate(this.props.entity);
+    },
     handleChart: function handleChart() {
 
         var choices = [];
@@ -1824,7 +1827,7 @@ var ItemTable = exports.ItemTable = React.createClass({
         if (target.creation === undefined) {
             for (var field_name in target.fields) {
                 var field = target.fields[field_name];
-                if (field.id || !field.editable && field.nullable || preselected[field_name] !== undefined) {
+                if (field.id || !field.editable && field.nullable || preselected !== undefined && preselected[field_name] !== undefined) {
                     continue;
                 }
                 controls[field_name] = { label: field_name, type: field.type, required: field.editable && !field.nullable };
@@ -1835,7 +1838,7 @@ var ItemTable = exports.ItemTable = React.createClass({
 
         var assoc_fields = target.associations.many_one.concat(target.associations.one_one);
         assoc_fields.forEach(function (assoc_field) {
-            if (preselected[assoc_field.fieldName] !== undefined) {
+            if (preselected !== undefined && preselected[assoc_field.fieldName] !== undefined) {
                 var ctrl = {
                     type: "info"
                     //,text: "Already Selected"
@@ -1853,8 +1856,10 @@ var ItemTable = exports.ItemTable = React.createClass({
 
         this.props.showModal("Create new " + target.name, controls, function (input, callback) {
 
-            for (var propname in preselected) {
-                input[propname] = preselected[propname];
+            if (preselected !== undefined) {
+                for (var propname in preselected) {
+                    input[propname] = preselected[propname];
+                }
             }
 
             $.ajax({
@@ -2176,8 +2181,21 @@ var ItemTable = exports.ItemTable = React.createClass({
             headers[order.index] = this.createFieldHeader(fieldName, order.width);
         }
 
-        if (g_InitialData.allow_fake_data_creation === true && this.props.mode === undefined) {
-            var fake_data_button = React.createElement("button", { className: "btn btn-default btn-xs fa fa-exclamation-triangle", onClick: this.handleFakeData });
+        if (this.props.mode === undefined) {
+            if (g_InitialData.allow_fake_data_creation === true) {
+                var fake_data_button = React.createElement("button", { className: "btn btn-default btn-xs fa fa-exclamation-triangle", onClick: this.handleFakeData });
+            }
+            if (entity.can_create === true) {
+                var create_button = React.createElement("button", { className: "btn btn-warning btn-xs fa fa-plus", onClick: this.handleCreate });
+            }
+            var luxury_buttons = React.createElement(
+                "span",
+                null,
+                React.createElement("button", { className: "btn btn-default btn-xs fa fa-bar-chart", onClick: this.handleChart }),
+                React.createElement("button", { className: "btn btn-default btn-xs fa fa-calculator", onClick: this.handleStats }),
+                React.createElement("button", { className: "btn btn-default btn-xs fa fa fa-download", onClick: this.handleDownload }),
+                fake_data_button
+            );
         }
 
         return React.createElement(
@@ -2189,16 +2207,14 @@ var ItemTable = exports.ItemTable = React.createClass({
                 React.createElement(
                     "span",
                     { className: "data-table-controls" },
+                    create_button,
                     React.createElement(
                         "b",
                         null,
                         g_InitialData.entities[data.entity].name
                     ),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-refresh", onClick: this.refresh }),
-                    React.createElement("button", { className: "btn btn-default btn-xs fa fa-bar-chart", onClick: this.handleChart }),
-                    React.createElement("button", { className: "btn btn-default btn-xs fa fa-calculator", onClick: this.handleStats }),
-                    React.createElement("button", { className: "btn btn-default btn-xs fa fa fa-download", onClick: this.handleDownload }),
-                    fake_data_button,
+                    luxury_buttons,
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-left", onClick: this.handlePage.bind(this, this.state.page - 1), disabled: this.state.page <= 0 }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-right", onClick: this.handlePage.bind(this, this.state.page + 1), disabled: this.state.page + 1 >= total_pages }),
                     " ",

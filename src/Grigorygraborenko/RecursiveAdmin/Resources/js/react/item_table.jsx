@@ -287,6 +287,9 @@ export const ItemTable = React.createClass({
         evnt.preventDefault();
         evnt.stopPropagation();
     }
+    ,handleCreate: function() {
+        this.itemCreate(this.props.entity);
+    }
     ,handleChart: function() {
 
         var choices = [];
@@ -555,7 +558,7 @@ export const ItemTable = React.createClass({
         if(target.creation === undefined) {
             for (var field_name in target.fields) {
                 var field = target.fields[field_name];
-                if (field.id || ((!field.editable) && (field.nullable)) || (preselected[field_name] !== undefined)) {
+                if (field.id || ((!field.editable) && (field.nullable)) || ((preselected !== undefined) && (preselected[field_name] !== undefined))) {
                     continue;
                 }
                 controls[field_name] = {label: field_name, type: field.type, required: (field.editable && (!field.nullable))};
@@ -566,7 +569,7 @@ export const ItemTable = React.createClass({
 
         var assoc_fields = target.associations.many_one.concat(target.associations.one_one);
         assoc_fields.forEach(function(assoc_field) {
-            if(preselected[assoc_field.fieldName] !== undefined) {
+            if((preselected !== undefined) && (preselected[assoc_field.fieldName] !== undefined)) {
                 var ctrl = {
                     type: "info"
                     //,text: "Already Selected"
@@ -584,8 +587,10 @@ export const ItemTable = React.createClass({
 
         this.props.showModal("Create new " + target.name, controls, function(input, callback) {
 
-            for(var propname in preselected) {
-                input[propname] = preselected[propname];
+            if(preselected !== undefined) {
+                for(var propname in preselected) {
+                    input[propname] = preselected[propname];
+                }
             }
 
             $.ajax({
@@ -809,19 +814,28 @@ export const ItemTable = React.createClass({
             headers[order.index] = this.createFieldHeader(fieldName, order.width);
         }
 
-        if((g_InitialData.allow_fake_data_creation === true) && (this.props.mode === undefined)) {
-            var fake_data_button = <button className={"btn btn-default btn-xs fa fa-exclamation-triangle"} onClick={this.handleFakeData} ></button>;
+        if(this.props.mode === undefined) {
+            if(g_InitialData.allow_fake_data_creation === true) {
+                var fake_data_button = <button className={"btn btn-default btn-xs fa fa-exclamation-triangle"} onClick={this.handleFakeData}></button>;
+            }
+            if(entity.can_create === true) {
+                var create_button = <button className={"btn btn-warning btn-xs fa fa-plus"} onClick={this.handleCreate}></button>;
+            }
+            var luxury_buttons = <span>
+                <button className={"btn btn-default btn-xs fa fa-bar-chart"} onClick={this.handleChart}></button>
+                <button className={"btn btn-default btn-xs fa fa-calculator"} onClick={this.handleStats}></button>
+                <button className={"btn btn-default btn-xs fa fa fa-download"} onClick={this.handleDownload}></button>
+                {fake_data_button}
+            </span>;
         }
 
         return  <div className={"data-table"} onMouseMove={this.handleMoveHeaderMove}>
             <div>
                         <span className={"data-table-controls"}>
+                        {create_button}
                         <b>{g_InitialData.entities[data.entity].name}</b>
                         <button className={"btn btn-default btn-xs fa fa-refresh"} onClick={this.refresh} ></button>
-                        <button className={"btn btn-default btn-xs fa fa-bar-chart"} onClick={this.handleChart} ></button>
-                        <button className={"btn btn-default btn-xs fa fa-calculator"} onClick={this.handleStats} ></button>
-                        <button className={"btn btn-default btn-xs fa fa fa-download"} onClick={this.handleDownload} ></button>
-                        {fake_data_button}
+                        {luxury_buttons}
                         <button className={"btn btn-default btn-xs fa fa-chevron-left"} onClick={this.handlePage.bind(this, this.state.page - 1)} disabled={this.state.page <= 0}></button>
                         <button className={"btn btn-default btn-xs fa fa-chevron-right"} onClick={this.handlePage.bind(this, this.state.page + 1)} disabled={(this.state.page + 1) >= total_pages}></button>&nbsp;
                             <span> Page: {this.state.page + 1} / {total_pages} (<b>{data.total_items}</b> items, <select value={this.state.pageSize} onChange={this.handlePageSize}>{pageSizes}</select> per page) </span>

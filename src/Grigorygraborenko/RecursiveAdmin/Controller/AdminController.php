@@ -81,7 +81,7 @@ class AdminController extends Controller {
      */
     private function hasPermission($type, $class_admin, $property_admin = NULL, $ignore_defaults = false) {
 
-        if(($type !== "read") && ($type !== "write") && ($type !== "entity") && ($type !== "create")) {
+        if(($type !== "read") && ($type !== "write") && ($type !== "entity") && ($type !== "create") && ($type !== "destroy")) {
             return false;
         }
         if($property_admin && ($property_admin->{$type})) {
@@ -259,6 +259,8 @@ class AdminController extends Controller {
                 ,"creation" => $creation
                 ,"name" => $name
                 ,"label" => $label
+                ,"can_create" => $this->hasPermission("create", $class_permission)
+                ,"can_destroy" => $this->hasPermission("destroy", $class_permission)
             );
 
             $entity = array(
