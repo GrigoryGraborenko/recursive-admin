@@ -1569,6 +1569,39 @@ var ItemTable = exports.ItemTable = React.createClass({
     handleCreate: function handleCreate() {
         this.itemCreate(this.props.entity);
     },
+    handleDestroy: function handleDestroy() {
+
+        var this_ref = this;
+        var send_data = { entity: this.props.entity };
+        var target_entity = g_InitialData.entities[this.props.entity];
+        var controls = {
+            instances: { type: "multientity", entity: this.props.entity, label: "Select instances to delete" },
+            info: { type: "info", label: "", text: "This will delete these instances. " },
+            sure: { type: "boolean", label: "Are you sure?" } };
+        this.props.showModal("Delete instances of " + target_entity.label, controls, function (input, callback) {
+            if (input.sure !== true) {
+                callback(false, "Cannot delete unless you are sure");
+                return;
+            }
+            send_data.ids = input.instances;
+
+            $.ajax({
+                type: "POST",
+                url: g_InitialData.destroy_route,
+                dataType: "json",
+                data: send_data
+            }).done(function (data) {
+                callback(true, "Successfully destroyed " + data.count + " entities");
+                this_ref.refresh();
+            }).error(function (data) {
+                if (data.responseJSON !== undefined) {
+                    callback(false, data.responseJSON.result);
+                } else {
+                    callback(false, "Unknown Error");
+                }
+            });
+        });
+    },
     handleChart: function handleChart() {
 
         var choices = [];
@@ -1593,7 +1626,6 @@ var ItemTable = exports.ItemTable = React.createClass({
             "associated-type": this.props["associated-type"]
         };
 
-        //var this_ref = this;
         this.props.showModal("Graph attributes for " + entity.label, controls, function (input, callback) {
 
             send_data.groupBy = input.attribute;
@@ -2186,7 +2218,10 @@ var ItemTable = exports.ItemTable = React.createClass({
                 var fake_data_button = React.createElement("button", { className: "btn btn-default btn-xs fa fa-exclamation-triangle", onClick: this.handleFakeData });
             }
             if (entity.can_create === true) {
-                var create_button = React.createElement("button", { className: "btn btn-warning btn-xs fa fa-plus", onClick: this.handleCreate });
+                var create_button = React.createElement("button", { className: "btn btn-primary btn-xs fa fa-plus", onClick: this.handleCreate });
+            }
+            if (entity.can_destroy === true) {
+                var destroy_button = React.createElement("button", { className: "btn btn-danger btn-xs fa fa-minus", onClick: this.handleDestroy });
             }
             var luxury_buttons = React.createElement(
                 "span",
@@ -2208,6 +2243,7 @@ var ItemTable = exports.ItemTable = React.createClass({
                     "span",
                     { className: "data-table-controls" },
                     create_button,
+                    destroy_button,
                     React.createElement(
                         "b",
                         null,

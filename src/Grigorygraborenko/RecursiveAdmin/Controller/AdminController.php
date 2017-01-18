@@ -294,6 +294,7 @@ class AdminController extends Controller {
             ,"edit_route" => $this->get("router")->generate("sr-admin-edit")
             ,"action_route" => $this->get("router")->generate("sr-admin-action")
             ,"create_route" => $this->get("router")->generate("sr-admin-create")
+            ,"destroy_route" => $this->get("router")->generate("sr-admin-destroy")
             ,"global_route" => $this->get("router")->generate("sr-admin-global-action")
             ,"entities" => $entities
             ,"entity_names" => $entity_names
@@ -1099,6 +1100,54 @@ class AdminController extends Controller {
         return $response;
     }
 
+    /**
+     * @Route("/destroy", name="sr-admin-destroy")
+     * @Method("POST")
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function adminDestroyAction(Request $request) {
+        $input = $request->request->all();
+
+        if((!array_key_exists("entity", $input)) || (!array_key_exists("ids", $input))) {
+            return $this->respondError("Incorrect parameters");
+        }
+
+        $metadata = $this->em->getMetadataFactory()->getMetadataFor($input["entity"]);
+        $reflection = $metadata->getReflectionClass();
+        $reader = new AnnotationReader();
+        $class_admin = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
+
+        if(!$this->hasPermission("destroy", $class_admin)) {
+            return $this->respondError("Permission denied");
+        }
+
+        // get array of ids for each id field
+        $criteria = array();
+        foreach($metadata->getIdentifierFieldNames() as $id_name) {
+            $id_list = array();
+            foreach($input['ids'] as $id_obj) {
+                if(array_key_exists($id_name, $id_obj)) {
+                    $id_list[] = $id_obj[$id_name];
+                }
+            }
+            $criteria[$id_name] = $id_list;
+        }
+
+        $repo = $this->em->getRepository($input["entity"]);
+        $doomed_entities = $repo->findBy($criteria);
+
+        foreach($doomed_entities as $entity) {
+            $this->em->remove($entity);
+        }
+        $this->em->flush();
+
+        $response = new JsonResponse();
+        $response->setData(array("success" => true, "count" => count($doomed_entities)));
+        return $response;
+    }
+    
     /**
      * @Route("/action", name="sr-admin-action")
      * @Method("POST")
