@@ -1,12 +1,10 @@
 
 #Recursive Admin for Symfony & Doctrine
-
 This bundle automatically provides an admin dashboard to manage all your doctrine entities. It presents each entity as a table of instances, and every association can be expanded recursively into a new table. Fine-grained permissions for entities, fields and actions are specifiable through annotations. It has an ajax-driven React front end, and customizable entry points for both global and per-entity actions. 
 
 Please note this bundle is still under development, so it probably won't look pretty until halfway through 2017. It's currently in use by two projects the author is developing for: a commercial and a non-profit project. Sonata admin was found to be insufficient for both those needs. 
 
 ## Installation
-
 This library can be installed via composer:
 
 ```bash
@@ -71,10 +69,10 @@ recursive_admin:
 It is highly recommended you don't enable this, or restrict it severely. If "allow_fake_data_creation" is set to true, it will show a button for each entity that allows users to create an arbitrary number of fake entity instances with randomized data and associations. This is useful for testing purposes, especially scale testing.
 
 ## Usage
-Click around and figure it out. I'll finish this documentation later.
-TODO: finish this
+Click around and try it out. This documentation will be filled out later. 
 
 ## Development
+There are plenty of ways of customizing out-of-the-box behaviour.
 
 ### Annotations
 Each entity can have two types of annotations: Per-entity, and per-field. Both use the @Admin annotation, and have similar options.
@@ -129,6 +127,7 @@ For example, if a user can have multiple orders, the order table will show a col
 
 ### Actions
 There are two types of custom actions a developer can specify: global and per-entity. Global actions will appear in the top bar, and can be hidden/shown depending on the entity. Per-entity actions will appear in the table once per row. 
+
 #### Global Actions
 In the config.yml file under recursive_admin, add a list of services with public function names:
 
@@ -175,6 +174,13 @@ public function SERVICE_FUNCTION($container, $admin) {
             ,"visible" => array('AppBundle\Entity\ApiEntry', 'AppBundle\Entity\TestResult')
 			,"input" => $user_input
 		)
+		,"more_tests" => array(
+			"callback" => "runMoreTests"
+			,"label" => "Additional Test APIs"
+			,"description" => "Run extra automatic tests for each API"
+			,"permission" => "ROLE_SUPER_ADMIN"
+			,"input" => $super_user_input
+		)
 	);
 }
 ```
@@ -185,7 +191,7 @@ Note that since this function is called after *any* global action is executed, y
 
 The "visible" key is optional and is an array of fully qualified entity names on which the global action should be visible under. The "description" key is for the text at the top of the modal that pops up when you click the button. The "input" key is fairly complex and will be described in the "Action Input Specification" section below.
 
-The callback function takes three arguments: the service container, the currently logged in admin, and an input key-value array. It should return either a string when an error occurs, or a key-value array for success. Returning a "report" key will display a success modal with the report string, formatted to handle newlines. Returning with a key "refresh" set to true will instead reload the modal with the fields cleared.
+The callback function takes three arguments: the service container, the currently logged in admin, and an input key-value array. It should return either a string when an error occurs, or a key-value array for success. Returning a "report" key will display a success modal with the report string, formatted to handle newlines. Returning with a key "refresh" set to true will instead reload the modal with the fields cleared. You can also return a string under "file", which will download the contents of that string as a file. This is useful for generating CSV's. 
 
 ```php
 public function runTests($container, $admin, $input) {
@@ -204,8 +210,75 @@ You can also return a key-value array under the key "file" with this structure:
 return array("file" => array("name" => "test_results.csv", "contents" => "test,result\ninternal,passed\nexternal,passed\n"));
 ```
 
-#### Action Input Specification
+#### Entity Actions
+In order to define custom entity actions for an entity, you must define two functions for it. The first is a static public function in the entity class called *adminStatic*. This function takes the service container and the admin user, and should return a key-value array. 
 
+The second is a non-static public function that takes the same input and returns a key-value specification of various actions. For example:
+
+```php
+
+    public static function adminStatic($container, $admin) {
+        return array(
+			"headers" => array(
+				array("label" => "Action", "permission" => "ROLE_ADMIN", "priority" => 50)
+			)
+			,"create" => array(
+                "callback" => "adminCreate"
+                ,"input" => $create_input
+			)
+
+        );
+    }
+	
+    public function adminActions($container, $admin) {
+
+		if(!$this->isBannable()) {
+			return array(); // no custom actions at all
+		}
+	
+        $ban_input = array(
+            "reason" => array(
+                "type" => "boolean"
+                ,"label" => "Ban forever?"
+               ,"default" => false
+            )
+        );
+
+        return array(
+            "ban" => array(
+                "heading" => "Action"
+                ,"callback" => "adminBan"
+                ,"permission" => "ROLE_ADMIN"
+                ,"class" => ($this->is_unbanned ? "btn-danger" : "btn-warning")
+                ,"label" => ($this->is_unbanned ? "BAN" : "UNBAN")
+                ,"input" => ($this->is_unbanned ? $ban_input : array())
+                ,"description" => ($is_unbanned ? "Unban this user" : "Ban this user")
+            )
+		)
+	}
+	
+	public function adminBan($container, $admin, $input) {
+		...
+		if($error_str) {
+			return "Error: error_str";
+		}
+		return array(
+			"affected_fields" => array("is_unbanned", "date_banned")
+			,"report" => "This user was banned or unbanned"
+		);
+	}
+	
+```
+
+The static function's returned array can have two keys: "headers" and "create". "headers" defines columns that appear on the user table. These columns will be the same across all instances of the entity, but can still be dynamic if you wish. "create" specifies a custom input and callback for an entity's creation and is optional. Each entity will of course have a default creation modal with all the fields.
+
+The non-static function needs to return a key-value array of various per-entity actions the user can take. There's no need to do the user permissions dynamically - there's a field for that in each action. The "heading" field determines which column the action appears in. If it's not specified or is set to a heading that the static function didn't define, the action will simply not appear. You only need one heading, but might like to define more if you have lots of actions.
+
+Each callback function takes the service container, admin user who is currently logged in, and an input array (See 'Action Input Specification' below for what to expect from that). The return value will either be a string or a key-value array. If a string is returned, the user sees an error and can redo the action with different inputs.
+
+If an array is returned, success is assumed. This return array will need to have an "affected_fields" array/boolean, which you fill in with what fields were modified, or set to true to always refresh the table. If the user has sorted or filtered by these fields, the table reloads. There is also a "report" return value, which leaves the modal up and shows the value as text (line breaks will display).
+
+#### Action Input Specification
 Global and per-entity actions will trigger modals with customizable inputs. Here is an example of what a particularly complex input specification might look like, with examples of all types of inputs:
 
 ```php
@@ -273,10 +346,12 @@ However, the same is not true of the input specs that live under a select input 
 	,"test_rerun" => array("value" => "false", "input" => array()
 ```
 
-#### Entity Actions
-TODO: finish this
-## License
+## Limitations
+This package was written with the assumption that each entity has a single primary key. Most features will work - but a primary key made of associations will break this admin. If this is a problem, please open an issue or contribute a fix. Future development will be directed towards making filtering more useful, by allowing you to filter on associations. 
 
+The motivation for open-sourcing this admin dashboard is to give back to the OS community, and also to get other people contributing to it's development. Please feel free to help out with bugs, limitations or features! 
+
+## License
 Recursive admin is open source under the GNU GPLv3 license.
 
 [Read the license here](./LICENSE)
