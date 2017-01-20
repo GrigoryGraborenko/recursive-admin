@@ -1007,11 +1007,13 @@ var ItemRow = exports.ItemRow = React.createClass({
         }
 
         var actions = [];
-        this.props.item._ACTIONS.forEach(function (action) {
-            if (action.heading === action_heading) {
-                actions.push(action);
-            }
-        });
+        if (this.props.item._ACTIONS !== undefined) {
+            this.props.item._ACTIONS.forEach(function (action) {
+                if (action.heading === action_heading) {
+                    actions.push(action);
+                }
+            });
+        }
         return React.createElement(
             "div",
             { key: action_heading, className: "data-cell data-sm" + classes, style: { width: width } },

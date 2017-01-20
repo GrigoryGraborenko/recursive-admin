@@ -87,11 +87,13 @@ export const ItemRow = React.createClass({
         }
 
         var actions = [];
-        this.props.item._ACTIONS.forEach(function(action) {
-            if(action.heading === action_heading) {
-                actions.push(action);
-            }
-        });
+        if(this.props.item._ACTIONS !== undefined) {
+            this.props.item._ACTIONS.forEach(function (action) {
+                if (action.heading === action_heading) {
+                    actions.push(action);
+                }
+            });
+        }
         return <div key={action_heading} className={"data-cell data-sm" + classes} style={{ width: width }} >{actions.map(this.createAction)}</div>;
     }
     ,createAssociation: function(association, width, classes) {

@@ -272,6 +272,8 @@ The second is a non-static public function that takes the same input and returns
 
 The static function's returned array can have two keys: "headers" and "create". "headers" defines columns that appear on the user table. These columns will be the same across all instances of the entity, but can still be dynamic if you wish. "create" specifies a custom input and callback for an entity's creation and is optional. Each entity will of course have a default creation modal with all the fields.
 
+If you define a callback function for creation, simply return a new object without persisting it, the admin will run the persist and flush. Return an error message as a string if an error occurs.
+
 The non-static function needs to return a key-value array of various per-entity actions the user can take. There's no need to do the user permissions dynamically - there's a field for that in each action. The "heading" field determines which column the action appears in. If it's not specified or is set to a heading that the static function didn't define, the action will simply not appear. You only need one heading, but might like to define more if you have lots of actions.
 
 Each callback function takes the service container, admin user who is currently logged in, and an input array (See 'Action Input Specification' below for what to expect from that). The return value will either be a string or a key-value array. If a string is returned, the user sees an error and can redo the action with different inputs.

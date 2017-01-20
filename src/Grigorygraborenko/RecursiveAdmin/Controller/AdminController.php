@@ -1048,16 +1048,17 @@ class AdminController extends Controller {
         }
 
         $user = $this->getUser();
-        $creation_callback = NULL;
+        $creation_spec = NULL;
         if($reflection->hasMethod("adminStatic")) {
             $entity_info = call_user_func(array($metadata->getName(), 'adminStatic'), $this->container, $user);
             if(array_key_exists("create", $entity_info) && array_key_exists("callback", $entity_info["create"])) {
-                $creation_callback = $entity_info["create"]['callback'];
+                $creation_spec = $entity_info["create"];
             }
         }
 
         $input = $input['input'];
-        if($creation_callback === NULL) {
+
+        if($creation_spec === NULL) {
             $new_item = $reflection->newInstanceWithoutConstructor();
 
             foreach($metadata->getAssociationMappings() as $assoc) {
@@ -1075,14 +1076,20 @@ class AdminController extends Controller {
                 if(!array_key_exists($field_name, $input)) {
                     continue;
                 }
-                if($input[$field_name] === "") {
+                $value = $input[$field_name];
+                if(($value === "") || ($value === NULL)) {
                     continue;
                 }
+                $field = $metadata->getFieldMapping($field_name);
+                if(($field['type'] === "datetime") || ($field['type'] === "date")) {
+                    $value = Carbon::createFromTimestampUTC($value);
+                }
 
-                $metadata->setFieldValue($new_item, $field_name, $input[$field_name]);
+                $metadata->setFieldValue($new_item, $field_name, $value);
             }
         } else {
-            $new_item = call_user_func(array($metadata->getName(), $creation_callback), $this->container, $user, $input);
+            $input = $this->processInput($creation_spec['input'], $input);
+            $new_item = call_user_func(array($metadata->getName(), $creation_spec['callback']), $this->container, $user, $input);
         }
 
         if($new_item === NULL) {
@@ -1342,8 +1349,29 @@ class AdminController extends Controller {
      * @param $name
      * @return mixed
      */
-    public function makeNameReadable($name) {
+    private function makeNameReadable($name) {
         return ucwords(strtolower(str_replace("_", " ", trim(preg_replace('/(?!^)[A-Z]{2,}(?=[A-Z][a-z])|[A-Z][a-z]/', ' $0', $name)))));
+    }
+
+    /**
+     * @param $input_spec
+     * @param $input
+     * @return mixed
+     */
+    private function processInput($input_spec, $input) {
+
+        foreach($input_spec as $key => $val) {
+            if(!array_key_exists($key, $input)) {
+                continue;
+            }
+            $type = $input_spec[$key]["type"];
+            if($type === "array") {
+                $input[$key] = $this->processInput($input_spec[$key]["input"], $input[$key]);
+            } else if(($type === "date") || ($type === "datetime")) {
+                $input[$key] = Carbon::createFromTimestampUTC($input[$key]);
+            }
+        }
+        return $input;
     }
 
     /**
@@ -1352,7 +1380,7 @@ class AdminController extends Controller {
      * @return JsonResponse
      * @throws \Exception
      */
-    public function respondError($message, $params = null) {
+    private function respondError($message, $params = null) {
         $message = array(
             'result' => $message
             ,'status' => 400
