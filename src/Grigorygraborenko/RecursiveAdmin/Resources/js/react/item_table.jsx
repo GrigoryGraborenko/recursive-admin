@@ -604,10 +604,13 @@ export const ItemTable = React.createClass({
             if((preselected !== undefined) && (preselected[assoc_field.fieldName] !== undefined)) {
                 var ctrl = {
                     type: "info"
-                    //,text: "Already Selected"
                     ,text: JSON.stringify(preselected[assoc_field.fieldName])
                 };
-            } else {
+                ctrl.label = assoc_field.fieldName;
+                controls[assoc_field.fieldName] = ctrl;
+            }
+            /*else {
+                return;
                 var ctrl = {
                     type: "entity"
                     ,entity: assoc_field.targetEntity
@@ -615,6 +618,7 @@ export const ItemTable = React.createClass({
             }
             ctrl.label = assoc_field.fieldName;
             controls[assoc_field.fieldName] = ctrl;
+            */
         });
 
         this.props.showModal("Create new " + target.name, controls, function(input, callback) {
