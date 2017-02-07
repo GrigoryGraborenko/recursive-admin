@@ -1818,7 +1818,7 @@ var ItemTable = exports.ItemTable = React.createClass({
             }).done(function (data) {
 
                 if (callback !== undefined) {
-                    callback(true, null);
+                    callback(true, data.report === undefined ? null : data.report);
                 }
                 // if true is returned, will always refresh
                 if (data.affected_fields === true) {
