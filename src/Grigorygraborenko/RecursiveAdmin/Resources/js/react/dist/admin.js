@@ -638,19 +638,19 @@ var FieldInput = React.createClass({
                     { className: 'form-inline' },
                     React.createElement('input', { type: 'date', className: "form-control", placeholder: 'yyyy-mm-dd', onChange: this.onChange.bind(this, field_name, field, "date"), value: date_val,
                         disabled: is_loading }),
-                    '  ',
+                    '\xA0\xA0',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "hour"), value: hour, disabled: is_loading },
                         hours
                     ),
-                    ' : ',
+                    ' :\xA0',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "minute"), value: minute, disabled: is_loading },
                         minutes
                     ),
-                    ' : ',
+                    ' :\xA0',
                     React.createElement(
                         'select',
                         { className: "form-control", onChange: this.onChange.bind(this, field_name, field, "second"), value: second, disabled: is_loading },
@@ -950,7 +950,9 @@ var ItemRow = exports.ItemRow = React.createClass({
         var val_ctrl = { type: field.type, label: field.label, default: is_null ? "" : value };
         if (field.choices !== undefined) {
             val_ctrl.type = "select";
-            val_ctrl.choices = field.choices;
+            val_ctrl.choices = field.choices.map(function (choice) {
+                return { label: choice, value: choice };
+            });
         }
         if (field.nullable === true) {
             controls['is_null'] = { type: "select", label: "Set to empty?", default: is_null ? "true" : "false", choices: [{ value: "true", label: "Empty" }, { value: "false", label: "Not Empty", input: {
@@ -1987,9 +1989,9 @@ var ItemTable = exports.ItemTable = React.createClass({
                     React.createElement(
                         "label",
                         null,
-                        " ",
+                        "\xA0",
                         choice,
-                        "  "
+                        "\xA0\xA0"
                     )
                 );
             };
@@ -2259,7 +2261,7 @@ var ItemTable = exports.ItemTable = React.createClass({
                     luxury_buttons,
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-left", onClick: this.handlePage.bind(this, this.state.page - 1), disabled: this.state.page <= 0 }),
                     React.createElement("button", { className: "btn btn-default btn-xs fa fa-chevron-right", onClick: this.handlePage.bind(this, this.state.page + 1), disabled: this.state.page + 1 >= total_pages }),
-                    " ",
+                    "\xA0",
                     React.createElement(
                         "span",
                         null,

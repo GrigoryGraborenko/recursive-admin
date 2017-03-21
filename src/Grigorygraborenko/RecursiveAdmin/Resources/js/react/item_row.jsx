@@ -35,7 +35,9 @@ export const ItemRow = React.createClass({
         var val_ctrl = { type: field.type, label: field.label, default: (is_null ? "" : value)};
         if(field.choices !== undefined) {
             val_ctrl.type = "select";
-            val_ctrl.choices = field.choices;
+            val_ctrl.choices = field.choices.map(function(choice) {
+                return { label: choice, value: choice };
+            });
         }
         if(field.nullable === true) {
             controls['is_null'] = { type: "select", label: "Set to empty?", default: (is_null ? "true" : "false"), choices: [
