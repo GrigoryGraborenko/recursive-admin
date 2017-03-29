@@ -203,11 +203,12 @@ export const ItemRow = React.createClass({
 
             var multi = this.props.mode.mode === "multiselect";
             if(multi) {
+                var select_all = !Array.isArray(this.props.mode.value);
                 var potentials = this.props.mode.value;
             } else {
+                var select_all = false;
                 var potentials = [this.props.mode.value];
             }
-            var select_all = !Array.isArray(this.props.mode.value);
 
             var is_selected = select_all ? true : potentials.some(function(select) {
                 var selected = true;
