@@ -176,22 +176,32 @@ var FieldInput = React.createClass({
                 change[field_name] = (minutes * 60) + parseInt(evnt.target.value);
             }
         } else if(field.type === "multientity") {
-            // var new_selects = this.state.input[field_name].filter(function(select) {
-            var new_selects = this.props.state[field_name].filter(function(select) {
 
-                var selected = true;
-                for(var propname in select) {
-                    if(select[propname] !== evnt[propname]) {
-                        selected = false;
-                        break;
-                    }
+            var select_all = !Array.isArray(this.props.state[field_name]);
+            if(sub_field === "all") {
+                if (select_all) {
+                    change[field_name] = [];
+                } else {
+                    change[field_name] = { filters: evnt };
                 }
-                return !selected;
-            });
-            change[field_name] = new_selects;
-            // if(this.state.input[field_name].length === new_selects.length) {
-            if(this.props.state[field_name].length === new_selects.length) {
-                change[field_name].push(evnt);
+            } else if(sub_field === "all.filters") {
+                change[field_name] = { filters: evnt };
+            } else if(!select_all) {
+                var new_selects = this.props.state[field_name].filter(function (select) {
+
+                    var selected = true;
+                    for (var propname in select) {
+                        if (select[propname] !== evnt[propname]) {
+                            selected = false;
+                            break;
+                        }
+                    }
+                    return !selected;
+                });
+                change[field_name] = new_selects;
+                if (this.props.state[field_name].length === new_selects.length) {
+                    change[field_name].push(evnt);
+                }
             }
         } else {
             change[field_name] = evnt.target.value;
@@ -263,7 +273,15 @@ var FieldInput = React.createClass({
         var is_loading = this.props.loading;
         var inputs = [];
         if((field.type === "entity") || (field.type === "multientity")) {
-            var mode = { mode: ((field.type === "multientity") ? "multiselect" : "select"), label: "Select", entity: field.entity, value: value, onChange: this.onChange.bind(this, field_name, field, null)};
+            var mode = {
+                mode: ((field.type === "multientity") ? "multiselect" : "select")
+                ,label: "Select", entity: field.entity
+                ,value: value
+                ,onChange: this.onChange.bind(this, field_name, field, null)
+                ,onSelectAll: function(filters, fixed) {
+                    this_ref.onChange(field_name, field, (fixed === true) ? "all.filters" : "all", filters);
+                }
+            };
             var input = <ItemTable entity={field.entity} mode={mode} columns={this.props.columns} moveHeader={this.props.moveHeader} fixedFilter={field.filter} />;
         } else if(field.type === "info") {
             var text_lines = [];

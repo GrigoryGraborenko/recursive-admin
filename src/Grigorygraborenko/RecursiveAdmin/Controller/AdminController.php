@@ -1117,7 +1117,7 @@ class AdminController extends Controller {
     public function adminDestroyAction(Request $request) {
         $input = $request->request->all();
 
-        if((!array_key_exists("entity", $input)) || (!array_key_exists("ids", $input))) {
+        if(!array_key_exists("entity", $input)) {
             return $this->respondError("Incorrect parameters");
         }
 
@@ -1130,24 +1130,37 @@ class AdminController extends Controller {
             return $this->respondError("Permission denied");
         }
 
-        // get array of ids for each id field
-        $criteria = array();
-        foreach($metadata->getIdentifierFieldNames() as $id_name) {
-            $id_list = array();
-            foreach($input['ids'] as $id_obj) {
-                if(array_key_exists($id_name, $id_obj)) {
-                    $id_list[] = $id_obj[$id_name];
-                }
-            }
-            $criteria[$id_name] = $id_list;
-        }
-
         $repo = $this->em->getRepository($input["entity"]);
-        $doomed_entities = $repo->findBy($criteria);
+        if(array_key_exists("select_all", $input)) {
 
+            $class_permission = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
+            $qb = $repo->createQueryBuilder('e');
+            if(array_key_exists("filter", $input)) {
+                $this->filterQuery($qb, $input, $metadata, $reflection, $reader, $class_permission);
+            }
+            $doomed_entities = $qb->getQuery()->getResult();
+
+        } else {
+
+            // get array of ids for each id field
+            $criteria = array();
+            foreach($metadata->getIdentifierFieldNames() as $id_name) {
+                $id_list = array();
+                foreach($input["ids"] as $id_obj) {
+                    if(array_key_exists($id_name, $id_obj)) {
+                        $id_list[] = $id_obj[$id_name];
+                    }
+                }
+                $criteria[$id_name] = $id_list;
+            }
+
+            $doomed_entities = $repo->findBy($criteria);
+        }
+        
         foreach($doomed_entities as $entity) {
             $this->em->remove($entity);
         }
+
         $this->em->flush();
 
         $response = new JsonResponse();

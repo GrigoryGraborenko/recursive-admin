@@ -159,6 +159,16 @@ export const ItemTable = React.createClass({
 
         return new_filter;
     }
+    ,updateModeFilter(fields) {
+        if(!this.props.mode) {
+            return;
+        }
+        if(fields !== null) {
+            this.props.mode.onSelectAll(fields, true);
+        } else {
+            this.props.mode.onSelectAll(this.state.filterFields, false);
+        }
+    }
     ,handleFilter: function(field) {
 
         var new_filter_fields = this.state.filterFields.slice(0);
@@ -183,6 +193,7 @@ export const ItemTable = React.createClass({
         } else {
             this.setState({filterFields: new_filter_fields});
         }
+        this.updateModeFilter(new_filter_fields);
     }
     ,handleFilterDelete: function(filter) {
 
@@ -199,6 +210,7 @@ export const ItemTable = React.createClass({
         });
 
         this.loadItemData(this.props, 0, this.state.pageSize, this.state.sortFields, new_filter_fields);
+        this.updateModeFilter(new_filter_fields);
     }
     ,handleFilterChange: function(filter, debounce, sub_value, only_null, evnt) {
 
@@ -231,6 +243,7 @@ export const ItemTable = React.createClass({
                 return false;
             }
         });
+        this.updateModeFilter(new_filter_fields);
     }
     ,handleSort: function(fieldName, type) {
 
@@ -300,11 +313,18 @@ export const ItemTable = React.createClass({
             ,info: { type: "info", label: "", text: "This will delete these instances. " }
             ,sure: { type: "boolean", label: "Are you sure?" } };
         this.props.showModal("Delete instances of " + target_entity.label, controls, function(input, callback) {
+
             if(input.sure !== true) {
                 callback(false, "Cannot delete unless you are sure");
                 return;
             }
-            send_data.ids = input.instances;
+
+            if(input.instances.filters !== undefined) {
+                send_data.select_all = true;
+                send_data.filter = input.instances.filters;
+            } else {
+                send_data.ids = input.instances;
+            }
 
             $.ajax({
                 type: "POST"
@@ -827,11 +847,22 @@ export const ItemTable = React.createClass({
 
         var mode = null;
         if((this.props.mode !== undefined) && (this.props.mode.entity === this.props.entity)) {
-            var mode_label = this.props.mode.label;
+            var mode_all_select = null;
             if(this.props.mode.mode === "multiselect") {
-                mode_label += "(" + this.props.mode.value.length + ")";
+                var select_all = !Array.isArray(this.props.mode.value);
+                if(!select_all) {
+                    var mode_label = "(" + this.props.mode.value.length + ")";
+                } else {
+                    var mode_label = "(all)";
+                }
+                mode_all_select = <span onClick={this.updateModeFilter.bind(this, null)}><input type="checkbox" checked={select_all} />{this.props.mode.label} {mode_label}</span>;
+            } else {
+                mode_all_select = <span>{this.props.mode.label}</span>;
             }
-            mode = <div key="mode" className={"data-cell data-header data-sm"}>{mode_label}</div>;
+            mode = (
+                <div key="mode" className={"data-cell data-header data-sm"}>
+                    {mode_all_select}
+                </div>);
         }
 
         var this_ref = this;

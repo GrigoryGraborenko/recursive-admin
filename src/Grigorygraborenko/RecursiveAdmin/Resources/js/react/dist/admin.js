@@ -432,22 +432,32 @@ var FieldInput = React.createClass({
                 change[field_name] = minutes * 60 + parseInt(evnt.target.value);
             }
         } else if (field.type === "multientity") {
-            // var new_selects = this.state.input[field_name].filter(function(select) {
-            var new_selects = this.props.state[field_name].filter(function (select) {
 
-                var selected = true;
-                for (var propname in select) {
-                    if (select[propname] !== evnt[propname]) {
-                        selected = false;
-                        break;
-                    }
+            var select_all = !Array.isArray(this.props.state[field_name]);
+            if (sub_field === "all") {
+                if (select_all) {
+                    change[field_name] = [];
+                } else {
+                    change[field_name] = { filters: evnt };
                 }
-                return !selected;
-            });
-            change[field_name] = new_selects;
-            // if(this.state.input[field_name].length === new_selects.length) {
-            if (this.props.state[field_name].length === new_selects.length) {
-                change[field_name].push(evnt);
+            } else if (sub_field === "all.filters") {
+                change[field_name] = { filters: evnt };
+            } else if (!select_all) {
+                var new_selects = this.props.state[field_name].filter(function (select) {
+
+                    var selected = true;
+                    for (var propname in select) {
+                        if (select[propname] !== evnt[propname]) {
+                            selected = false;
+                            break;
+                        }
+                    }
+                    return !selected;
+                });
+                change[field_name] = new_selects;
+                if (this.props.state[field_name].length === new_selects.length) {
+                    change[field_name].push(evnt);
+                }
             }
         } else {
             change[field_name] = evnt.target.value;
@@ -519,7 +529,15 @@ var FieldInput = React.createClass({
         var is_loading = this.props.loading;
         var inputs = [];
         if (field.type === "entity" || field.type === "multientity") {
-            var mode = { mode: field.type === "multientity" ? "multiselect" : "select", label: "Select", entity: field.entity, value: value, onChange: this.onChange.bind(this, field_name, field, null) };
+            var mode = {
+                mode: field.type === "multientity" ? "multiselect" : "select",
+                label: "Select", entity: field.entity,
+                value: value,
+                onChange: this.onChange.bind(this, field_name, field, null),
+                onSelectAll: function onSelectAll(filters, fixed) {
+                    this_ref.onChange(field_name, field, fixed === true ? "all.filters" : "all", filters);
+                }
+            };
             var input = React.createElement(_item_table.ItemTable, { entity: field.entity, mode: mode, columns: this.props.columns, moveHeader: this.props.moveHeader, fixedFilter: field.filter });
         } else if (field.type === "info") {
             var text_lines = [];
@@ -1166,8 +1184,9 @@ var ItemRow = exports.ItemRow = React.createClass({
             } else {
                 var potentials = [this.props.mode.value];
             }
+            var select_all = !Array.isArray(this.props.mode.value);
 
-            var is_selected = potentials.some(function (select) {
+            var is_selected = select_all ? true : potentials.some(function (select) {
                 var selected = true;
                 for (var propname in ids) {
                     if (ids[propname] !== select[propname]) {
@@ -1196,7 +1215,7 @@ var ItemRow = exports.ItemRow = React.createClass({
                 var select_ctrl = React.createElement(
                     "span",
                     { onClick: this.props.mode.onChange.bind(this, ids) },
-                    React.createElement("input", { type: "checkbox", checked: is_selected, readOnly: true }),
+                    React.createElement("input", { type: "checkbox", disabled: select_all, checked: is_selected, readOnly: true }),
                     is_selected ? "Selected" : "Select"
                 );
             } else {
@@ -1442,6 +1461,16 @@ var ItemTable = exports.ItemTable = React.createClass({
 
         return new_filter;
     },
+    updateModeFilter: function updateModeFilter(fields) {
+        if (!this.props.mode) {
+            return;
+        }
+        if (fields !== null) {
+            this.props.mode.onSelectAll(fields, true);
+        } else {
+            this.props.mode.onSelectAll(this.state.filterFields, false);
+        }
+    },
     handleFilter: function handleFilter(field) {
 
         var new_filter_fields = this.state.filterFields.slice(0);
@@ -1466,6 +1495,7 @@ var ItemTable = exports.ItemTable = React.createClass({
         } else {
             this.setState({ filterFields: new_filter_fields });
         }
+        this.updateModeFilter(new_filter_fields);
     },
     handleFilterDelete: function handleFilterDelete(filter) {
 
@@ -1482,6 +1512,7 @@ var ItemTable = exports.ItemTable = React.createClass({
         });
 
         this.loadItemData(this.props, 0, this.state.pageSize, this.state.sortFields, new_filter_fields);
+        this.updateModeFilter(new_filter_fields);
     },
     handleFilterChange: function handleFilterChange(filter, debounce, sub_value, only_null, evnt) {
 
@@ -1514,6 +1545,7 @@ var ItemTable = exports.ItemTable = React.createClass({
                 return false;
             }
         });
+        this.updateModeFilter(new_filter_fields);
     },
     handleSort: function handleSort(fieldName, type) {
 
@@ -1583,11 +1615,18 @@ var ItemTable = exports.ItemTable = React.createClass({
             info: { type: "info", label: "", text: "This will delete these instances. " },
             sure: { type: "boolean", label: "Are you sure?" } };
         this.props.showModal("Delete instances of " + target_entity.label, controls, function (input, callback) {
+
             if (input.sure !== true) {
                 callback(false, "Cannot delete unless you are sure");
                 return;
             }
-            send_data.ids = input.instances;
+
+            if (input.instances.filters !== undefined) {
+                send_data.select_all = true;
+                send_data.filter = input.instances.filters;
+            } else {
+                send_data.ids = input.instances;
+            }
 
             $.ajax({
                 type: "POST",
@@ -2194,14 +2233,33 @@ var ItemTable = exports.ItemTable = React.createClass({
 
         var mode = null;
         if (this.props.mode !== undefined && this.props.mode.entity === this.props.entity) {
-            var mode_label = this.props.mode.label;
+            var mode_all_select = null;
             if (this.props.mode.mode === "multiselect") {
-                mode_label += "(" + this.props.mode.value.length + ")";
+                var select_all = !Array.isArray(this.props.mode.value);
+                if (!select_all) {
+                    var mode_label = "(" + this.props.mode.value.length + ")";
+                } else {
+                    var mode_label = "(all)";
+                }
+                mode_all_select = React.createElement(
+                    "span",
+                    { onClick: this.updateModeFilter.bind(this, null) },
+                    React.createElement("input", { type: "checkbox", checked: select_all }),
+                    this.props.mode.label,
+                    " ",
+                    mode_label
+                );
+            } else {
+                mode_all_select = React.createElement(
+                    "span",
+                    null,
+                    this.props.mode.label
+                );
             }
             mode = React.createElement(
                 "div",
                 { key: "mode", className: "data-cell data-header data-sm" },
-                mode_label
+                mode_all_select
             );
         }
 

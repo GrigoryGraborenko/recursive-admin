@@ -207,8 +207,9 @@ export const ItemRow = React.createClass({
             } else {
                 var potentials = [this.props.mode.value];
             }
+            var select_all = !Array.isArray(this.props.mode.value);
 
-            var is_selected = potentials.some(function(select) {
+            var is_selected = select_all ? true : potentials.some(function(select) {
                 var selected = true;
                 for(var propname in ids) {
                     if(ids[propname] !== select[propname]) {
@@ -234,7 +235,7 @@ export const ItemRow = React.createClass({
              }
              */
             if(multi) {
-                var select_ctrl = <span onClick={this.props.mode.onChange.bind(this, ids)} ><input type="checkbox" checked={is_selected} readOnly />{(is_selected ? "Selected" : "Select")}</span>;
+                var select_ctrl = <span onClick={this.props.mode.onChange.bind(this, ids)} ><input type="checkbox" disabled={select_all} checked={is_selected} readOnly />{(is_selected ? "Selected" : "Select")}</span>;
             } else {
                 if(is_selected) {
                     var button_text = "Selected";
