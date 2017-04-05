@@ -182,10 +182,10 @@ var FieldInput = React.createClass({
                 if (select_all) {
                     change[field_name] = [];
                 } else {
-                    change[field_name] = { filters: evnt };
+                    change[field_name] = { filter: evnt, select_all: true };
                 }
             } else if(sub_field === "all.filters") {
-                change[field_name] = { filters: evnt };
+                change[field_name] = { filter: evnt, select_all: true };
             } else if(!select_all) {
                 var new_selects = this.props.state[field_name].filter(function (select) {
 

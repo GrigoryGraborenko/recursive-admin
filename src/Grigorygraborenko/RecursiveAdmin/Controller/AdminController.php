@@ -1121,42 +1121,9 @@ class AdminController extends Controller {
             return $this->respondError("Incorrect parameters");
         }
 
-        $metadata = $this->em->getMetadataFactory()->getMetadataFor($input["entity"]);
-        $reflection = $metadata->getReflectionClass();
-        $reader = new AnnotationReader();
-        $class_admin = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
+        $proc_input = $this->processInput(array("entities" => array("type" => "multientity", "entity" => $input["entity"])), array("entities" => $input["ids"]));
+        $doomed_entities = $proc_input["entities"];
 
-        if(!$this->hasPermission("destroy", $class_admin)) {
-            return $this->respondError("Permission denied");
-        }
-
-        $repo = $this->em->getRepository($input["entity"]);
-        if(array_key_exists("select_all", $input)) {
-
-            $class_permission = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
-            $qb = $repo->createQueryBuilder('e');
-            if(array_key_exists("filter", $input)) {
-                $this->filterQuery($qb, $input, $metadata, $reflection, $reader, $class_permission);
-            }
-            $doomed_entities = $qb->getQuery()->getResult();
-
-        } else {
-
-            // get array of ids for each id field
-            $criteria = array();
-            foreach($metadata->getIdentifierFieldNames() as $id_name) {
-                $id_list = array();
-                foreach($input["ids"] as $id_obj) {
-                    if(array_key_exists($id_name, $id_obj)) {
-                        $id_list[] = $id_obj[$id_name];
-                    }
-                }
-                $criteria[$id_name] = $id_list;
-            }
-
-            $doomed_entities = $repo->findBy($criteria);
-        }
-        
         foreach($doomed_entities as $entity) {
             $this->em->remove($entity);
         }
@@ -1224,7 +1191,7 @@ class AdminController extends Controller {
 
         $input_vars = NULL;
         if(array_key_exists("input", $input)) {
-            $input_vars = $input['input'];
+            $input_vars = $this->processInput($action["input"], $input['input']);
         }
 
         try {
@@ -1268,6 +1235,7 @@ class AdminController extends Controller {
         $global = $this->config['global_actions'][$index];
         $service = $this->get($global['service']);
         $action_list = $service->{$global["method"]}($this->container, $user);
+
         if(!array_key_exists($name, $action_list)) {
             return array(false, "Action does not exist");
         }
@@ -1281,6 +1249,8 @@ class AdminController extends Controller {
         if($expect_direct && ($action["direct_call"] !== true)) {
             return array(false, "Cannot make direct call to this action");
         }
+
+        $input = $this->processInput($action["input"], $input);
 
         // makes the call to the service with the input and gets the result
         try {
@@ -1377,11 +1347,67 @@ class AdminController extends Controller {
             if(!array_key_exists($key, $input)) {
                 continue;
             }
-            $type = $input_spec[$key]["type"];
+            $spec = $input_spec[$key];
+            $type = $spec["type"];
             if($type === "array") {
-                $input[$key] = $this->processInput($input_spec[$key]["input"], $input[$key]);
+                $input[$key] = $this->processInput($spec["input"], $input[$key]);
             } else if(($type === "date") || ($type === "datetime")) {
-                $input[$key] = Carbon::createFromTimestampUTC($input[$key]);
+                if($input[$key]) {
+                    $input[$key] = Carbon::createFromTimestampUTC($input[$key]);
+                }
+            } else if($type === "select") {
+
+                foreach($spec["choices"] as $choice) {
+                    if(($choice["value"] === $input[$key]) && array_key_exists("input", $choice)) {
+                        $proc_input = array();
+                        foreach($choice["input"] as $choice_key => $choice_val) {
+                            $proc_input[$choice_key] = $input[$choice_key];
+                        }
+                        $choice_output = $this->processInput($choice["input"], $proc_input);
+                        $input = array_merge($input, $choice_output);
+                    }
+                }
+
+            } else if($type === "multientity") {
+
+                $multi_input = $input[$key];
+
+                $metadata = $this->em->getMetadataFactory()->getMetadataFor($spec["entity"]);
+                $reflection = $metadata->getReflectionClass();
+                $reader = new AnnotationReader();
+                $class_admin = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
+
+                if(!$this->hasPermission("entity", $class_admin)) {
+                    continue;
+                }
+                $repo = $this->em->getRepository($spec["entity"]);
+
+                if(array_key_exists("select_all", $multi_input)) {
+
+                    $class_permission = $reader->getClassAnnotation($reflection, "Grigorygraborenko\\RecursiveAdmin\\Annotations\\Admin");
+                    $qb = $repo->createQueryBuilder('e');
+                    if(array_key_exists("filter", $multi_input)) {
+                        $this->filterQuery($qb, $multi_input, $metadata, $reflection, $reader, $class_permission);
+                    }
+                    $entities = $qb->getQuery()->getResult();
+
+                } else {
+
+                    $criteria = array();
+                    foreach($metadata->getIdentifierFieldNames() as $id_name) {
+                        $id_list = array();
+                        foreach($multi_input as $id_obj) {
+                            if(array_key_exists($id_name, $id_obj)) {
+                                $id_list[] = $id_obj[$id_name];
+                            }
+                        }
+                        $criteria[$id_name] = $id_list;
+                    }
+
+                    $entities = $repo->findBy($criteria);
+                }
+
+                $input[$key] = $entities;
             }
         }
         return $input;
