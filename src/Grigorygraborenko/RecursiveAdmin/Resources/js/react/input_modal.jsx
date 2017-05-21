@@ -390,7 +390,7 @@ var FieldInput = React.createClass({
         // var value = this.state.input[field_name];
         var value = this.props.state[field_name];
 
-        if((field === undefined) || (value === undefined)) {
+        if((field === undefined) || ((value === undefined) && (field.type !== "info"))) {
             //console.log("return NULL for " + field_name);
             return null;
         }
