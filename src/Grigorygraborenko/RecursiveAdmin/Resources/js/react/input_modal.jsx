@@ -495,6 +495,8 @@ export const InputModal = React.createClass({
                 });
             } else if(this.state.report.type === "chart") {
                 var report = <ChartContainer data={this.state.report.data} field={this.state.report.field} />;
+            } else if(this.state.report.type === "html") {
+                var report = <span dangerouslySetInnerHTML={{ __html: this.state.report.data }} />;
             } else {
                 var report = <span>Unknown report type</span>;
             }

@@ -827,6 +827,8 @@ var InputModal = exports.InputModal = React.createClass({
                 });
             } else if (this.state.report.type === "chart") {
                 var report = React.createElement(ChartContainer, { data: this.state.report.data, field: this.state.report.field });
+            } else if (this.state.report.type === "html") {
+                var report = React.createElement('span', { dangerouslySetInnerHTML: { __html: this.state.report.data } });
             } else {
                 var report = React.createElement(
                     'span',
