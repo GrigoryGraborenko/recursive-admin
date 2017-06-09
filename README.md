@@ -1,5 +1,5 @@
-
 #Recursive Admin for Symfony & Doctrine
+
 This bundle automatically provides an admin dashboard to manage all your doctrine entities. It presents each entity as a table of instances, and every association can be expanded recursively into a new table. Fine-grained permissions for entities, fields and actions are specifiable through annotations. It has an ajax-driven React front end, and customizable entry points for both global and per-entity actions. 
 
 Please note this bundle is still under development, so it probably won't look pretty until halfway through 2017. It's currently in use by two projects the author is developing for: a commercial and a non-profit project. Sonata admin was found to be insufficient for both those needs. 
