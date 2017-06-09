@@ -1,4 +1,4 @@
-#Recursive Admin for Symfony & Doctrine
+# Recursive Admin for Symfony & Doctrine
 
 This bundle automatically provides an admin dashboard to manage all your doctrine entities. It presents each entity as a table of instances, and every association can be expanded recursively into a new table. Fine-grained permissions for entities, fields and actions are specifiable through annotations. It has an ajax-driven React front end, and customizable entry points for both global and per-entity actions. 
 
