@@ -512,6 +512,21 @@ var FieldInput = React.createClass({
         var input = $.extend({}, this.props.state, change);
         this.props.onChange(input);
     },
+    handleMoveArray: function handleMoveArray(field_name, field, index, is_up) {
+        if (this.props.loading) {
+            return;
+        }
+        var new_arr = this.props.state[field_name].slice(0);
+        var delta = is_up ? -1 : 0;
+
+        var removed = new_arr.splice(index + delta, 2);
+        new_arr.splice.apply(new_arr, [index + delta, 0].concat(removed.reverse())); // splice takes args not an array - apply fixes that
+
+        var change = {};
+        change[field_name] = new_arr;
+        var input = $.extend({}, this.props.state, change);
+        this.props.onChange(input);
+    },
     handleArrayChange: function handleArrayChange(field_name, field, index, value) {
         if (this.props.loading) {
             return;
@@ -607,7 +622,9 @@ var FieldInput = React.createClass({
                 inputs.push({ field: { required: false, label: "# " + index }, field_name: field_name + index, input: React.createElement(
                         'div',
                         null,
-                        React.createElement('i', { className: 'fa fa-times action-icon', 'aria-hidden': 'true', onClick: this.handleDeleteArray.bind(this, field_name, field, index) }),
+                        React.createElement('i', { className: 'fa fa-times action-icon', 'aria-hidden': 'true', onClick: this.handleDeleteArray.bind(this, field_name, field, index), style: { paddingRight: "10px" } }),
+                        React.createElement('i', { className: "fa fa-arrow-up action-icon" + (index === 0 ? " hidden" : ""), 'aria-hidden': 'true', onClick: this.handleMoveArray.bind(this, field_name, field, index, true) }),
+                        React.createElement('i', { className: "fa fa-arrow-down action-icon" + (index + 1 >= value.length ? " hidden" : ""), 'aria-hidden': 'true', onClick: this.handleMoveArray.bind(this, field_name, field, index, false) }),
                         React.createElement(FieldInput, { input: field.input, state: this.props.state[field_name][index], loading: this.props.loading, onChange: this.handleArrayChange.bind(this, field_name, field, index), columns: this.props.columns, moveHeader: this.props.moveHeader })
                     ) });
             }, this);
@@ -694,6 +711,8 @@ var FieldInput = React.createClass({
                 null,
                 React.createElement('input', { type: 'file', className: "modal-file-upload", 'data-name': field_name, onChange: this.handleFileChange.bind(this, field_name, field) })
             );
+        } else if (field.lines !== undefined) {
+            var input = React.createElement('textarea', { rows: field.lines, className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
         } else {
             //console.log("Unknown type " +  field.type);
             var input = React.createElement('input', { type: 'text', className: "form-control", id: field_name, onChange: this.onChange.bind(this, field_name, field, null), value: value, disabled: is_loading });
