@@ -35,7 +35,7 @@ recursive_admin:
         write: [ROLE_SUPER_ADMIN]
         create: [ROLE_SUPER_ADMIN]
         destroy: [ROLE_SUPER_ADMIN]
-	back_route: YOUR_HOME_PAGE_ROUTE	
+    back_route: YOUR_HOME_PAGE_ROUTE	
 ```
 
 The attribute "back_route" is optional and will simply add a back button to the dashboard linking to that route name. Add a route for the dashboard in your routing.yml:
@@ -51,7 +51,7 @@ Then finally, make sure to firewall off this route in security.yml:
 
 ```yml
     access_control:
-		...
+        ...
         - { path: ^/YOUR-URL-HERE/, role: ROLE_ADMIN }
 ```
 
@@ -88,11 +88,11 @@ use Grigorygraborenko\RecursiveAdmin\Annotations\Admin;
  */
 class TestResult {
 
-	/**
-	 * @ORM\Column(type="string")
-	 * @Admin(read="ROLE_ADMIN", priority=10, label="Test Name")
-	 */
-	protected $name;
+    /**
+     * @ORM\Column(type="string")
+     * @Admin(read="ROLE_ADMIN", priority=10, label="Test Name")
+     */
+    protected $name;
 ```
 
 Below are the various options for the annotation and their effects. All of them are optional, and you don't even need the admin annotation on the entity or it's fields for it to show up in the admin dashboard. Most of these are permission strings/arrays. If you want no user to be permitted to see or edit a field, set that permission to "none" or some other string that doesn't exist as a user role. This can be useful for blanket banning a permission at the entity level and then selectively allowing certain fields, or vice versa. If neither entity-level or field-level permissions are set, the default permissions specified in your config file are used.
@@ -133,12 +133,12 @@ In the config.yml file under recursive_admin, add a list of services with public
 
 ```yml
 global_actions:
-	-
-	  service: SERVICE_NAME
-	  method: SERVICE_FUNCTION
-	-
-	  service: OTHER_SERVICE_NAME
-	  method: OTHER_SERVICE_FUNCTION
+    -
+      service: SERVICE_NAME
+      method: SERVICE_FUNCTION
+    -
+      service: OTHER_SERVICE_NAME
+      method: OTHER_SERVICE_FUNCTION
 ```
 
 These functions will each be called each time you view a new entity, load the page or activate a global function. The functions themselves will receive two arguments, the service container and the admin user who is currently logged in. The user argument is in case you want to create or omit custom actions based on user's data. It is not required for permissions management, which is described below. Here is a sample service global actions function:
@@ -146,42 +146,42 @@ These functions will each be called each time you view a new entity, load the pa
 ```php
 public function SERVICE_FUNCTION($container, $admin) {
 
-	$user_input = array(
-		"api" => array(
-			"type" => "select"
-			,"label" => "Which API?"
-			,"choices" => array(
-				array("label" => "Internal", "value" => "int_01")
-				,array("label" => "External", "value" => "ext_02")
-				,array("label" => "All of them", "value" => "*")
-			)
-		)
-		,"num_tests" => array(
-			"type" => "integer"
-			,"label" => "How many times should the tests run?"
-			,"default" => 1
-			,"required" => true
-		)
-	);
+    $user_input = array(
+        "api" => array(
+            "type" => "select"
+            ,"label" => "Which API?"
+            ,"choices" => array(
+                array("label" => "Internal", "value" => "int_01")
+                ,array("label" => "External", "value" => "ext_02")
+                ,array("label" => "All of them", "value" => "*")
+            )
+        )
+        ,"num_tests" => array(
+            "type" => "integer"
+            ,"label" => "How many times should the tests run?"
+            ,"default" => 1
+            ,"required" => true
+        )
+    );
 
-	return array(
-		"tests" => array(
-			"callback" => "runTests"
-			,"label" => "Test APIs"
-			,"description" => "Run automatic tests for each API"
-			,"permission" => "ROLE_ADMIN"
+    return array(
+        "tests" => array(
+            "callback" => "runTests"
+            ,"label" => "Test APIs"
+            ,"description" => "Run automatic tests for each API"
+            ,"permission" => "ROLE_ADMIN"
             ,"classes" => "btn btn-xs btn-warning"
             ,"visible" => array('AppBundle\Entity\ApiEntry', 'AppBundle\Entity\TestResult')
-			,"input" => $user_input
-		)
-		,"more_tests" => array(
-			"callback" => "runMoreTests"
-			,"label" => "Additional Test APIs"
-			,"description" => "Run extra automatic tests for each API"
-			,"permission" => "ROLE_SUPER_ADMIN"
-			,"input" => $super_user_input
-		)
-	);
+            ,"input" => $user_input
+        )
+        ,"more_tests" => array(
+            "callback" => "runMoreTests"
+            ,"label" => "Additional Test APIs"
+            ,"description" => "Run extra automatic tests for each API"
+            ,"permission" => "ROLE_SUPER_ADMIN"
+            ,"input" => $super_user_input
+        )
+    );
 }
 ```
 
@@ -195,12 +195,12 @@ The callback function takes three arguments: the service container, the currentl
 
 ```php
 public function runTests($container, $admin, $input) {
-	...
-	if($some_error) {
-		return "Tests had an error of some sort";
-	}
-	...
-	return array("report" => "Everything went well");
+    ...
+    if($some_error) {
+        return "Tests had an error of some sort";
+    }
+    ...
+    return array("report" => "Everything went well");
 }
 ```
 
@@ -219,23 +219,23 @@ The second is a non-static public function that takes the same input and returns
 
     public static function adminStatic($container, $admin) {
         return array(
-			"headers" => array(
-				array("label" => "Action", "permission" => "ROLE_ADMIN", "priority" => 50)
-			)
-			,"create" => array(
+            "headers" => array(
+                array("label" => "Action", "permission" => "ROLE_ADMIN", "priority" => 50)
+            )
+            ,"create" => array(
                 "callback" => "adminCreate"
                 ,"input" => $create_input
-			)
+            )
 
         );
     }
-	
+    
     public function adminActions($container, $admin) {
 
-		if(!$this->isBannable()) {
-			return array(); // no custom actions at all
-		}
-	
+        if(!$this->isBannable()) {
+            return array(); // no custom actions at all
+        }
+    
         $ban_input = array(
             "reason" => array(
                 "type" => "boolean"
@@ -254,20 +254,20 @@ The second is a non-static public function that takes the same input and returns
                 ,"input" => ($this->is_unbanned ? $ban_input : array())
                 ,"description" => ($is_unbanned ? "Unban this user" : "Ban this user")
             )
-		)
-	}
-	
-	public function adminBan($container, $admin, $input) {
-		...
-		if($error_str) {
-			return "Error: error_str";
-		}
-		return array(
-			"affected_fields" => array("is_unbanned", "date_banned")
-			,"report" => "This user was banned or unbanned"
-		);
-	}
-	
+        )
+    }
+    
+    public function adminBan($container, $admin, $input) {
+        ...
+        if($error_str) {
+            return "Error: error_str";
+        }
+        return array(
+            "affected_fields" => array("is_unbanned", "date_banned")
+            ,"report" => "This user was banned or unbanned"
+        );
+    }
+    
 ```
 
 The static function's returned array can have two keys: "headers" and "create". "headers" defines columns that appear on the user table. These columns will be the same across all instances of the entity, but can still be dynamic if you wish. "create" specifies a custom input and callback for an entity's creation and is optional. Each entity will of course have a default creation modal with all the fields.
@@ -284,54 +284,55 @@ If an array is returned, success is assumed. This return array will need to have
 Global and per-entity actions will trigger modals with customizable inputs. Here is an example of what a particularly complex input specification might look like, with examples of all types of inputs:
 
 ```php
-	$user_input = array(
-		"test_name" => array("type" => "string", "label" => "Name of New Test", "required" => true)
-		,"test_quantity" => array("type" => "integer", "label" => "How many times it should run", "default" => 1)
-		,"test_fraction" => array("type" => "decimal", "label" => "Fraction of acceptable errors", "required" => true, "default" => 0.1)
-		,"test_critical" => array("type" => "boolean", "label" => "Is this test critical?", "default" => false)
-		,"test_type" => array("type" => "select", "label" => "Type of test", "default" => "internal", "choices" => array(
-			array("label" => "Internal", "value" => "internal")
-			,array("label" => "External", "value" => "external")
-			,array("label" => "Both internal & external", "value" => "hybrid")
-		))
-		,"test_rerun" => array("type" => "select", "label" => "Re-run in case of failure?", "default" => "false", "choices" => array(
-			array("label" => "No", "value" => "false")
-			,array("label" => "Yes", "value" => "true", "input" => array(
-				"test_num_reruns" => array("type" => "integer", "label" => "How many times it should attempt to re-run", "default" => 10)
-				,"test_justification" => array("type" => "string", "label" => "Why should this test re-run?", "default" => "Because why not.")
-			))
-		))
-		,"test_user" => array("type" => "entity", "label" => "A user responsible for this test", "entity" => 'AppBundle\Entity\User')
-		,"test_dependencies" => array("type" => "multientity", "label" => "A list of tests that must run first", , "entity" => 'AppBundle\Entity\TestSpec')
-		,"test_error_descriptions" => array("type" => "array", "label" => "A list of descriptions for error codes", "input" => array(
-			"code" => array("type" => "integer", "label" => "Error code", "required" => true)
-			,"description" => array("type" => "string", "label" => "Description", "required" => true)
-		))
-		,"test_file" => array("type" => "file", "label" => "Upload a file", "required" => true)
-	);
+    $user_input = array(
+        "test_name" => array("type" => "string", "label" => "Name of New Test", "required" => true)
+        ,"test_description" => array("type" => "string", "label" => "Description of New Test", "required" => true, "lines" => 4) // lines will enable textarea with N rows
+        ,"test_quantity" => array("type" => "integer", "label" => "How many times it should run", "default" => 1)
+        ,"test_fraction" => array("type" => "decimal", "label" => "Fraction of acceptable errors", "required" => true, "default" => 0.1)
+        ,"test_critical" => array("type" => "boolean", "label" => "Is this test critical?", "default" => false)
+        ,"test_type" => array("type" => "select", "label" => "Type of test", "default" => "internal", "choices" => array(
+            array("label" => "Internal", "value" => "internal")
+            ,array("label" => "External", "value" => "external")
+            ,array("label" => "Both internal & external", "value" => "hybrid")
+        ))
+        ,"test_rerun" => array("type" => "select", "label" => "Re-run in case of failure?", "default" => "false", "choices" => array(
+            array("label" => "No", "value" => "false")
+            ,array("label" => "Yes", "value" => "true", "input" => array(
+                "test_num_reruns" => array("type" => "integer", "label" => "How many times it should attempt to re-run", "default" => 10)
+                ,"test_justification" => array("type" => "string", "label" => "Why should this test re-run?", "default" => "Because why not.")
+            ))
+        ))
+        ,"test_user" => array("type" => "entity", "label" => "A user responsible for this test", "entity" => 'AppBundle\Entity\User')
+        ,"test_dependencies" => array("type" => "multientity", "label" => "A list of tests that must run first", , "entity" => 'AppBundle\Entity\TestSpec')
+        ,"test_error_descriptions" => array("type" => "array", "label" => "A list of descriptions for error codes", "input" => array(
+            "code" => array("type" => "integer", "label" => "Error code", "required" => true)
+            ,"description" => array("type" => "string", "label" => "Description", "required" => true)
+        ))
+        ,"test_file" => array("type" => "file", "label" => "Upload a file", "required" => true)
+    );
 ```
 
 When the user clicks OK on the modal, an array is sent to the callback function with the user's values for each input as a key. In this example, it will have keys such as "test_name" (a string), "test_fraction" (a boolean) and "test_file" (a Symfony\Component\HttpFoundation\File\UploadedFile object). Here is an example of what you might get from this above structure:
 
 ```php
-	// the callback function will get something like this back:
-	$input_result = array(
-		"test_name" => "Division by zero"
-		,"test_quantity" => 3
-		,"test_fraction" => 0.2
-		,"test_type" => "internal"
-		,"test_rerun" => "true" // if this was "false", the array would not have the next two entries
-		,"test_num_reruns" => 126 // only appears if "test_rerun" was "true"
-		,"test_justification" => "Just in case that zero wasn't really zero, but a really small number." // only appears if "test_rerun" was "true"
-		,"test_user" => "ID_43tgf43mn9j38er23" // Not an object, but an ID
-		,"test_dependencies" => array("ID_3hj767jfgfdg", "ID_rthg54trhytj4t") // Not an array of objects, but ID's
-		,"test_error_descriptions" => array(
-			array("code" => 12, "description" => "Something mysterious went wrong")
-			,array("code" => 46, "description" => "Negative zero encountered")
-			,array("code" => 1, "description" => "There was an error detected in the error detection subroutines")
-		)
-		,"test_file" => [OBJECT]
-	);
+    // the callback function will get something like this back:
+    $input_result = array(
+        "test_name" => "Division by zero"
+        ,"test_quantity" => 3
+        ,"test_fraction" => 0.2
+        ,"test_type" => "internal"
+        ,"test_rerun" => "true" // if this was "false", the array would not have the next two entries
+        ,"test_num_reruns" => 126 // only appears if "test_rerun" was "true"
+        ,"test_justification" => "Just in case that zero wasn't really zero, but a really small number." // only appears if "test_rerun" was "true"
+        ,"test_user" => "ID_43tgf43mn9j38er23" // Not an object, but an ID
+        ,"test_dependencies" => array("ID_3hj767jfgfdg", "ID_rthg54trhytj4t") // Not an array of objects, but ID's
+        ,"test_error_descriptions" => array(
+            array("code" => 12, "description" => "Something mysterious went wrong")
+            ,array("code" => 46, "description" => "Negative zero encountered")
+            ,array("code" => 1, "description" => "There was an error detected in the error detection subroutines")
+        )
+        ,"test_file" => [OBJECT]
+    );
 ```
 
 Inputs arrays are consistant across the various methods of triggering them, and they are recursive too. The input result for "test_error_descriptions" will be an array, with each item in that array the exact same format as you would get from a non-recursive input spec. This can be nested as deep as you like.
@@ -339,13 +340,13 @@ Inputs arrays are consistant across the various methods of triggering them, and 
 However, the same is not true of the input specs that live under a select input type's options. You can declare a select type which creates a drop-down box with values. When that value is selected, by default or by the user, the optional "input" attribute can dynamically create further inputs. This can be nested as deep as you like. The resulting values, unlike array input types, will actually be declared at the same level of the array as the top-level inputs. For example, in the above sample result, "test_num_reruns" was at the same array level of nesting as "test_rerun". The main reason this strange array flattening takes place is because there is no simple, clean method of returning the value *as well as* the potential input array. Gaze upon this horror and agree:
 
 ```php
-	// either this...
-	,"test_rerun" => array("value" => "true", "input" => array(
-		"test_num_reruns" => 126
-		,"test_justification" => "Just in case that zero wasn't really zero, but a really small number."
-	)
-	// ...or this
-	,"test_rerun" => array("value" => "false", "input" => array()
+    // either this...
+    ,"test_rerun" => array("value" => "true", "input" => array(
+        "test_num_reruns" => 126
+        ,"test_justification" => "Just in case that zero wasn't really zero, but a really small number."
+    )
+    // ...or this
+    ,"test_rerun" => array("value" => "false", "input" => array()
 ```
 
 ## Limitations
